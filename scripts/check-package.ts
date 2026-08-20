@@ -18,7 +18,7 @@ try {
     stdout: "inherit",
     stderr: "inherit",
   })
-  if ((await pack.exited) !== 0) process.exit(1)
+  if ((await pack.exited) !== 0) throw new Error("Package creation failed")
 
   const tarballs = (await readdir(packageDirectory)).filter((entry) => entry.endsWith(".tgz"))
   if (tarballs.length !== 1) throw new Error(`Expected one package tarball, found ${tarballs.length}`)
@@ -28,12 +28,12 @@ try {
     stderr: "inherit",
   })
   const entries = (await new Response(listing.stdout).text()).split(/\r?\n/u).filter(Boolean)
-  if ((await listing.exited) !== 0) process.exit(1)
+  if ((await listing.exited) !== 0) throw new Error("Package listing failed")
 
   const unexpected = entries.filter((entry) => !allowedEntries.has(entry))
   if (unexpected.length > 0) {
     for (const entry of unexpected) console.error(`Unexpected package entry: ${entry}`)
-    process.exit(1)
+    throw new Error("Package contains unexpected entries")
   }
 } finally {
   await rm(packageDirectory, { recursive: true, force: true })

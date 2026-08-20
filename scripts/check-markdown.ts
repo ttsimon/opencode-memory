@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises"
 
 const excludedDirectories = new Set([".git", "node_modules", "dist", "coverage", ".tmp"])
 
-function isIncludedMarkdown(path: string): boolean {
+function isIncludedTrackedMarkdown(path: string): boolean {
   const parts = path.replaceAll("\\", "/").split("/")
   return path.toLowerCase().endsWith(".md") && !parts.some((part) => excludedDirectories.has(part))
 }
@@ -14,15 +14,28 @@ async function trackedMarkdownFiles(): Promise<string[]> {
   })
   const output = await new Response(git.stdout).text()
   if ((await git.exited) !== 0) process.exit(1)
-  return output.split("\0").filter(isIncludedMarkdown)
+  return output.split("\0").filter(isIncludedTrackedMarkdown)
 }
 
 const requestedFiles = process.argv.slice(2)
-const files = requestedFiles.length > 0 ? requestedFiles.filter(isIncludedMarkdown) : await trackedMarkdownFiles()
+const files = requestedFiles.length > 0 ? requestedFiles : await trackedMarkdownFiles()
 let failed = false
 
 for (const path of files) {
-  const content = await readFile(path, "utf8")
+  if (!path.toLowerCase().endsWith(".md")) {
+    console.error(`${path}:1`)
+    failed = true
+    continue
+  }
+
+  let content: string
+  try {
+    content = await readFile(path, "utf8")
+  } catch {
+    console.error(`${path}:1`)
+    failed = true
+    continue
+  }
   const lines = content.split("\n")
   const locations = new Set<number>()
 
