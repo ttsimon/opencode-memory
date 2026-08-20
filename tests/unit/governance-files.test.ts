@@ -72,3 +72,38 @@ test("the code of conduct identifies Contributor Covenant 2.1 and a private cont
   expect(codeOfConduct).toContain("private reports")
   expect(codeOfConduct).toContain("simon.office@qq.com")
 })
+
+test("public documentation describes the current project accurately", async () => {
+  const readme = await readFile("README.md", "utf8")
+  expect(readme).toContain("health skeleton")
+  expect(readme).toContain("Memory features are not yet released")
+  expect(readme).toContain("local-only")
+  expect(readme).toContain("OpenCode 1.18.18")
+  expect(readme).toContain("Bun 1.3.14")
+
+  const security = await readFile("SECURITY.md", "utf8")
+  expect(security).toContain("private vulnerability reporting")
+  expect(security).toContain("Do not disclose secrets in public issues")
+  expect(security).toContain("0.x")
+  expect(security).toContain("72 hours")
+  expect(security).toContain("does not promise a fix deadline")
+
+  const architecture = await readFile("docs/architecture.md", "utf8")
+  expect(architecture).toContain("local-only")
+  expect(architecture).toContain("health skeleton")
+  expect(architecture).toContain("not yet implemented")
+
+  expect(await readFile("LICENSE", "utf8")).toContain("MIT License")
+  expect(await readFile("LICENSE", "utf8")).toContain("Copyright (c) 2026 Simon")
+  const compatibility = await readFile("docs/compatibility.md", "utf8")
+  expect(compatibility).toContain("OpenCode 1.18.18")
+  expect(compatibility).toContain("Bun 1.3.14")
+})
+
+test("publishing metadata and ADRs are complete", async () => {
+  const packageJson = JSON.parse(await readFile("package.json", "utf8"))
+  expect(packageJson.name).toBe("@ttsimon/opencode-memory")
+  expect(packageJson.publishConfig).toEqual({ access: "public", provenance: true })
+  expect(packageJson.repository.url).toBe("git+https://github.com/ttsimon/opencode-memory.git")
+  expect(await readFile("docs/decisions/0002-bun-sqlite.md", "utf8")).toContain("bun:sqlite")
+})
