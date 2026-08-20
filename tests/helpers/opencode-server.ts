@@ -14,6 +14,17 @@ interface ProcessHandle {
   pid: number
 }
 
+interface VersionProcessHandle extends ProcessHandle {
+  stderr: ReadableStream<Uint8Array>
+  stdout: ReadableStream<Uint8Array>
+}
+
+interface VersionCheckInput {
+  platform?: NodeJS.Platform
+  spawn?: () => VersionProcessHandle
+  timeoutMs?: number
+}
+
 interface PortRetryInput<T> {
   deadline: number
   maxAttempts?: number
@@ -37,6 +48,7 @@ const expectedVersion = "1.18.18"
 const startupTimeoutMs = 15_000
 const stopTimeoutMs = 3_000
 const terminateStepTimeoutMs = 1_000
+const versionCheckTimeoutMs = 5_000
 const portAttempts = 5
 
 function errorText(error: unknown): string {
@@ -59,32 +71,96 @@ async function settleWithin(promise: Promise<unknown>, timeoutMs: number): Promi
   return completed
 }
 
+async function requireWithin<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(timeoutMessage)), Math.max(1, timeoutMs))
+      }),
+    ])
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
+
 async function defaultTaskkill(args: string[]): Promise<void> {
-  const taskkill = Bun.spawn(["taskkill", ...args], { stderr: "ignore", stdout: "ignore" })
-  await taskkill.exited
+  const taskkill = Bun.spawn(["taskkill", ...args], { stderr: "pipe", stdout: "ignore" })
+  const [exitCode, stderr] = await Promise.all([taskkill.exited, new Response(taskkill.stderr).text()])
+  if (exitCode !== 0) throw new Error(stderr.trim() || `taskkill exited with code ${exitCode}`)
 }
 
 export async function terminateProcess(child: ProcessHandle, options: TerminateOptions = {}): Promise<void> {
-  if (child.exitCode !== null) return
   const timeoutMs = options.timeoutMs ?? terminateStepTimeoutMs
   const platform = options.platform ?? process.platform
 
   if (platform === "win32") {
-    try {
-      child.kill()
-      if (await settleWithin(child.exited, timeoutMs)) return
-    } catch {
-      // taskkill below is the process-tree fallback when Bun cannot terminate the child.
+    if (child.exitCode === null) {
+      try {
+        child.kill()
+        await settleWithin(child.exited, timeoutMs)
+      } catch {
+        // taskkill below is authoritative for the full process tree.
+      }
     }
-    await settleWithin((options.runTaskkill ?? defaultTaskkill)(["/PID", String(child.pid), "/T", "/F"]), timeoutMs)
-    await settleWithin(child.exited, timeoutMs)
-    return
+    try {
+      await requireWithin(
+        (options.runTaskkill ?? defaultTaskkill)(["/PID", String(child.pid), "/T", "/F"]),
+        timeoutMs,
+        `taskkill timed out after ${timeoutMs}ms`,
+      )
+    } catch (error) {
+      if (!/not found|no running instance|not exist/i.test(errorText(error))) {
+        throw new Error(`taskkill failed: ${errorText(error)}`)
+      }
+    }
+    if (await settleWithin(child.exited, timeoutMs)) return
+    throw new Error(`OpenCode process ${child.pid} did not exit after taskkill`)
   }
 
+  if (child.exitCode !== null) return
   child.kill("SIGTERM")
   if (await settleWithin(child.exited, timeoutMs)) return
   child.kill("SIGKILL")
-  await settleWithin(child.exited, timeoutMs)
+  if (await settleWithin(child.exited, timeoutMs)) return
+  throw new Error(`OpenCode process ${child.pid} did not exit after SIGKILL`)
+}
+
+export async function assertOpenCodeVersion(input: VersionCheckInput = {}): Promise<void> {
+  const timeoutMs = input.timeoutMs ?? versionCheckTimeoutMs
+  const child = (
+    input.spawn ??
+    ((() =>
+      Bun.spawn(["bunx", "--bun", "opencode", "--version"], {
+        cwd: join(import.meta.dir, "../.."),
+        stderr: "pipe",
+        stdout: "pipe",
+      })) as () => VersionProcessHandle)
+  )()
+  const stdout = new Response(child.stdout).text()
+  const stderr = new Response(child.stderr).text()
+  const completed = Promise.all([child.exited, stdout, stderr])
+
+  if (!(await settleWithin(completed, timeoutMs))) {
+    let cleanupFailure = ""
+    try {
+      await terminateProcess(child, {
+        ...(input.platform ? { platform: input.platform } : {}),
+        timeoutMs,
+      })
+    } catch (error) {
+      cleanupFailure = `; cleanup failed: ${errorText(error)}`
+    }
+    throw new Error(`OpenCode version check timed out after ${timeoutMs}ms${cleanupFailure}`)
+  }
+
+  const [exitCode, actualVersion, diagnosticStderr] = await completed
+  if (exitCode !== 0 || actualVersion.trim() !== expectedVersion) {
+    const received = actualVersion.trim() || "no version"
+    const detail = diagnosticStderr.trim() ? `: ${diagnosticStderr.trim()}` : ""
+    throw new Error(`Expected OpenCode ${expectedVersion}, received ${received}${detail}`)
+  }
 }
 
 export async function runWithPortRetries<T>(input: PortRetryInput<T>): Promise<T> {
@@ -141,6 +217,49 @@ export function redactOutput(
   return result
 }
 
+export function createTemporaryRootCleanup(temporaryRoot: string, remove: () => Promise<void>) {
+  let removed = false
+  let removing: Promise<void> | undefined
+
+  const removeRoot = async (
+    environment: Record<string, string | undefined> = process.env,
+    timeoutMs = stopTimeoutMs,
+  ): Promise<void> => {
+    if (removed) return
+    if (!removing) {
+      removing = remove().then(() => {
+        removed = true
+      })
+    }
+    const attempt = removing
+    try {
+      await requireWithin(attempt, timeoutMs, `Cleanup timed out after ${timeoutMs}ms`)
+    } catch (error) {
+      throw new Error(redactOutput(errorText(error), temporaryRoot, environment))
+    } finally {
+      if (!removed && removing === attempt) removing = undefined
+    }
+  }
+
+  return {
+    async afterStartFailure(
+      error: unknown,
+      stderr: string,
+      environment: Record<string, string | undefined> = process.env,
+    ): Promise<never> {
+      const reason = redactOutput(errorText(error), temporaryRoot, environment)
+      const diagnostic = redactOutput(stderr, temporaryRoot, environment)
+      try {
+        await removeRoot(environment)
+      } catch (cleanupError) {
+        throw new Error(`${reason}\nOpenCode stderr:\n${diagnostic}\nCleanup failed: ${errorText(cleanupError)}`)
+      }
+      throw new Error(`${reason}\nOpenCode stderr:\n${diagnostic}`)
+    },
+    remove: removeRoot,
+  }
+}
+
 async function seedPluginDependency(directory: string): Promise<void> {
   const pluginPackageDir = join(directory, "node_modules", "@opencode-ai", "plugin")
   const dependencies = { "@opencode-ai/plugin": expectedVersion }
@@ -156,19 +275,11 @@ async function seedPluginDependency(directory: string): Promise<void> {
 }
 
 export async function startIsolatedOpenCodeServer(input: StartOpenCodeInput): Promise<RunningOpenCode> {
-  const version = Bun.spawnSync(["bunx", "--bun", "opencode", "--version"], {
-    cwd: join(import.meta.dir, "../.."),
-    stderr: "pipe",
-    stdout: "pipe",
-  })
-  const actualVersion = version.stdout.toString().trim()
-  if (version.exitCode !== 0 || actualVersion !== expectedVersion) {
-    throw new Error(`Expected OpenCode ${expectedVersion}, received ${actualVersion || "no version"}`)
-  }
+  await assertOpenCodeVersion()
 
   const temporaryRoot = await mkdtemp(join(tmpdir(), "opencode-memory-e2e-"))
+  const cleanup = createTemporaryRootCleanup(temporaryRoot, () => rm(temporaryRoot, { force: true, recursive: true }))
   const deadline = Date.now() + startupTimeoutMs
-  let removeTemporaryRoot = true
   let diagnosticStderr = ""
 
   try {
@@ -237,9 +348,17 @@ export async function startIsolatedOpenCodeServer(input: StartOpenCodeInput): Pr
           }
           throw new Error(`OpenCode startup timed out; last /path result: ${lastResponse}`)
         } catch (error) {
-          await terminateProcess(child)
+          let processCleanupFailure: unknown
+          try {
+            await terminateProcess(child)
+          } catch (cleanupError) {
+            processCleanupFailure = cleanupError
+          }
           await settleWithin(stderrReader, terminateStepTimeoutMs)
           diagnosticStderr += redactOutput(rawStderr, temporaryRoot)
+          if (processCleanupFailure) {
+            throw new Error(`${errorText(error)}\nProcess cleanup failed: ${errorText(processCleanupFailure)}`)
+          }
           throw error
         }
       },
@@ -248,20 +367,26 @@ export async function startIsolatedOpenCodeServer(input: StartOpenCodeInput): Pr
     let stopped = false
     const stop = async () => {
       if (stopped) return
-      stopped = true
       const stopDeadline = Date.now() + stopTimeoutMs
+      let stopFailure: unknown
       try {
         await terminateProcess(started.child, {
           timeoutMs: Math.min(terminateStepTimeoutMs, Math.max(1, stopDeadline - Date.now())),
         })
         await settleWithin(started.stderrReader, Math.max(1, stopDeadline - Date.now()))
-      } finally {
-        const cleanup = rm(temporaryRoot, { force: true, recursive: true })
-        if (!(await settleWithin(cleanup, Math.max(1, stopDeadline - Date.now())))) void cleanup.catch(() => {})
+      } catch (error) {
+        stopFailure = error
       }
+      try {
+        await cleanup.remove(process.env, stopDeadline - Date.now())
+      } catch (cleanupError) {
+        const reason = stopFailure ? `${errorText(stopFailure)}\n` : ""
+        throw new Error(redactOutput(`${reason}Cleanup failed: ${errorText(cleanupError)}`, temporaryRoot))
+      }
+      if (stopFailure) throw new Error(redactOutput(errorText(stopFailure), temporaryRoot))
+      stopped = true
     }
 
-    removeTemporaryRoot = false
     return {
       baseUrl: started.baseUrl,
       projectDir,
@@ -269,9 +394,6 @@ export async function startIsolatedOpenCodeServer(input: StartOpenCodeInput): Pr
       stop,
     }
   } catch (error) {
-    const reason = redactOutput(errorText(error), temporaryRoot)
-    throw new Error(`${reason}\nOpenCode stderr:\n${diagnosticStderr}`)
-  } finally {
-    if (removeTemporaryRoot) await rm(temporaryRoot, { force: true, recursive: true })
+    return await cleanup.afterStartFailure(error, diagnosticStderr)
   }
 }

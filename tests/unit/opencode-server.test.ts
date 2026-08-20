@@ -1,5 +1,11 @@
 import { expect, test } from "bun:test"
-import { redactOutput, runWithPortRetries, terminateProcess } from "../helpers/opencode-server"
+import {
+  assertOpenCodeVersion,
+  createTemporaryRootCleanup,
+  redactOutput,
+  runWithPortRetries,
+  terminateProcess,
+} from "../helpers/opencode-server"
 
 test("redactOutput removes temporary paths and secrets from diagnostics", () => {
   const output = redactOutput("root=C:\\temp\\run token=hunter2", "C:\\temp\\run", {
@@ -10,7 +16,7 @@ test("redactOutput removes temporary paths and secrets from diagnostics", () => 
   expect(output).not.toContain("hunter2")
 })
 
-test("terminateProcess escalates from TERM to KILL on Unix within a bound", async () => {
+test("terminateProcess reports failure when Unix remains alive after KILL", async () => {
   const signals: string[] = []
   const child = {
     exited: new Promise<number>(() => {}),
@@ -22,13 +28,15 @@ test("terminateProcess escalates from TERM to KILL on Unix within a bound", asyn
   }
   const startedAt = performance.now()
 
-  await terminateProcess(child, { platform: "linux", timeoutMs: 10 })
+  await expect(terminateProcess(child, { platform: "linux", timeoutMs: 10 })).rejects.toThrow(
+    "did not exit after SIGKILL",
+  )
 
   expect(signals).toEqual(["SIGTERM", "SIGKILL"])
   expect(performance.now() - startedAt).toBeLessThan(100)
 })
 
-test("terminateProcess falls back to taskkill for a stuck Windows process tree", async () => {
+test("terminateProcess reports failure when Windows remains alive after taskkill", async () => {
   const signals: string[] = []
   const taskkillCalls: string[][] = []
   const child = {
@@ -40,13 +48,15 @@ test("terminateProcess falls back to taskkill for a stuck Windows process tree",
     pid: 456,
   }
 
-  await terminateProcess(child, {
-    platform: "win32",
-    runTaskkill: async (args) => {
-      taskkillCalls.push(args)
-    },
-    timeoutMs: 10,
-  })
+  await expect(
+    terminateProcess(child, {
+      platform: "win32",
+      runTaskkill: async (args) => {
+        taskkillCalls.push(args)
+      },
+      timeoutMs: 10,
+    }),
+  ).rejects.toThrow("did not exit after taskkill")
 
   expect(signals).toEqual(["default"])
   expect(taskkillCalls).toEqual([["/PID", "456", "/T", "/F"]])
@@ -72,6 +82,132 @@ test("terminateProcess uses taskkill when direct Windows termination throws", as
   })
 
   expect(taskkillCalls).toEqual([["/PID", "789", "/T", "/F"]])
+})
+
+test("terminateProcess always cleans the Windows process tree after direct child exit", async () => {
+  const taskkillCalls: string[][] = []
+  const child = {
+    exited: Promise.resolve(0),
+    exitCode: null,
+    kill() {},
+    pid: 987,
+  }
+
+  await terminateProcess(child, {
+    platform: "win32",
+    runTaskkill: async (args) => {
+      taskkillCalls.push(args)
+      throw new Error("process not found")
+    },
+    timeoutMs: 10,
+  })
+
+  expect(taskkillCalls).toEqual([["/PID", "987", "/T", "/F"]])
+})
+
+test("terminateProcess reports non-missing Windows process-tree cleanup failures", async () => {
+  const child = {
+    exited: Promise.resolve(0),
+    exitCode: 0,
+    kill() {},
+    pid: 654,
+  }
+
+  await expect(
+    terminateProcess(child, {
+      platform: "win32",
+      runTaskkill: async () => {
+        throw new Error("access denied")
+      },
+      timeoutMs: 10,
+    }),
+  ).rejects.toThrow("taskkill failed: access denied")
+})
+
+test("terminateProcess reports a bounded taskkill timeout even after direct child exit", async () => {
+  const child = {
+    exited: Promise.resolve(0),
+    exitCode: 0,
+    kill() {},
+    pid: 655,
+  }
+
+  await expect(
+    terminateProcess(child, {
+      platform: "win32",
+      runTaskkill: async () => await new Promise<void>(() => {}),
+      timeoutMs: 10,
+    }),
+  ).rejects.toThrow("taskkill timed out")
+})
+
+test("OpenCode version detection is asynchronous, bounded, and terminates on timeout", async () => {
+  const signals: string[] = []
+  const child = {
+    exited: new Promise<number>(() => {}),
+    exitCode: null,
+    kill(signal?: number | NodeJS.Signals) {
+      signals.push(String(signal ?? "SIGTERM"))
+    },
+    pid: 321,
+    stderr: new Blob([""]).stream(),
+    stdout: new Blob([""]).stream(),
+  }
+  const startedAt = performance.now()
+
+  await expect(
+    assertOpenCodeVersion({
+      platform: "linux",
+      spawn: () => child,
+      timeoutMs: 10,
+    }),
+  ).rejects.toThrow("OpenCode version check timed out")
+
+  expect(signals).toEqual(["SIGTERM", "SIGKILL"])
+  expect(performance.now() - startedAt).toBeLessThan(100)
+})
+
+test("temporary root cleanup remains retryable and redacts stop failures", async () => {
+  let attempts = 0
+  const cleanup = createTemporaryRootCleanup("C:\\temp\\secret-root", async () => {
+    attempts += 1
+    if (attempts === 1) throw new Error("cannot remove C:\\temp\\secret-root token=hunter2")
+  })
+
+  await expect(cleanup.remove({ API_TOKEN: "hunter2" })).rejects.toThrow(
+    "cannot remove <temporary-root> token=<redacted:API_TOKEN>",
+  )
+  await cleanup.remove({ API_TOKEN: "hunter2" })
+  await cleanup.remove({ API_TOKEN: "hunter2" })
+
+  expect(attempts).toBe(2)
+})
+
+test("temporary root cleanup can retry after a bounded removal times out", async () => {
+  let attempts = 0
+  const cleanup = createTemporaryRootCleanup("C:\\temp\\secret-root", async () => {
+    attempts += 1
+    if (attempts === 1) await new Promise<void>(() => {})
+  })
+
+  await expect(cleanup.remove({}, 10)).rejects.toThrow("Cleanup timed out after 10ms")
+  await cleanup.remove({}, 10)
+
+  expect(attempts).toBe(2)
+})
+
+test("temporary root cleanup appends a redacted cleanup failure to startup errors", async () => {
+  const cleanup = createTemporaryRootCleanup("C:\\temp\\secret-root", async () => {
+    throw new Error("rm C:\\temp\\secret-root token=hunter2")
+  })
+
+  await expect(
+    cleanup.afterStartFailure(new Error("startup failed token=hunter2"), "stderr token=hunter2", {
+      API_TOKEN: "hunter2",
+    }),
+  ).rejects.toThrow(
+    "startup failed token=<redacted:API_TOKEN>\nOpenCode stderr:\nstderr token=<redacted:API_TOKEN>\nCleanup failed: rm <temporary-root> token=<redacted:API_TOKEN>",
+  )
 })
 
 test("runWithPortRetries retries address conflicts but respects its deadline", async () => {
