@@ -92,6 +92,8 @@ test("public documentation describes the current project accurately", async () =
   expect(architecture).toContain("local-only")
   expect(architecture).toContain("health skeleton")
   expect(architecture).toContain("not yet implemented")
+  expect(architecture).toContain("The current implementation is a health skeleton")
+  expect(architecture).not.toContain("The published code is")
 
   expect(await readFile("LICENSE", "utf8")).toContain("MIT License")
   expect(await readFile("LICENSE", "utf8")).toContain("Copyright (c) 2026 Simon")
@@ -102,8 +104,45 @@ test("public documentation describes the current project accurately", async () =
 
 test("publishing metadata and ADRs are complete", async () => {
   const packageJson = JSON.parse(await readFile("package.json", "utf8"))
-  expect(packageJson.name).toBe("@ttsimon/opencode-memory")
+  expect(packageJson.repository).toEqual({
+    type: "git",
+    url: "git+https://github.com/ttsimon/opencode-memory.git",
+  })
+  expect(packageJson.homepage).toBe("https://github.com/ttsimon/opencode-memory#readme")
+  expect(packageJson.bugs).toEqual({ url: "https://github.com/ttsimon/opencode-memory/issues" })
+  expect(packageJson.keywords).toEqual(["opencode", "memory", "plugin", "local-first"])
+  expect(packageJson.private).toBe(false)
+  expect(packageJson.license).toBe("MIT")
   expect(packageJson.publishConfig).toEqual({ access: "public", provenance: true })
-  expect(packageJson.repository.url).toBe("git+https://github.com/ttsimon/opencode-memory.git")
-  expect(await readFile("docs/decisions/0002-bun-sqlite.md", "utf8")).toContain("bun:sqlite")
+
+  const changesetConfig = JSON.parse(await readFile(".changeset/config.json", "utf8"))
+  expect(changesetConfig).toEqual({
+    $schema: "https://unpkg.com/@changesets/config@3.1.2/schema.json",
+    changelog: "@changesets/cli/changelog",
+    commit: false,
+    fixed: [],
+    linked: [],
+    access: "public",
+    baseBranch: "main",
+    updateInternalDependencies: "patch",
+    ignore: [],
+  })
+
+  const adrPaths = [
+    "docs/decisions/0001-bun-toolchain.md",
+    "docs/decisions/0002-bun-sqlite.md",
+    "docs/decisions/0003-command-routing.md",
+  ]
+  for (const path of adrPaths) {
+    const adr = await readFile(path, "utf8")
+    for (const section of ["Status", "Context", "Decision", "Alternatives", "Consequences"]) {
+      expect(adr).toContain(`## ${section}\n`)
+    }
+  }
+
+  expect(await readFile(adrPaths[1] as string, "utf8")).toContain("bun:sqlite")
+  const commandRouting = await readFile(adrPaths[2] as string, "utf8")
+  expect(commandRouting).toContain("can only mutate the output `parts`")
+  expect(commandRouting).toContain("cannot short-circuit command execution")
+  expect(commandRouting).toContain("cannot directly return database results")
 })

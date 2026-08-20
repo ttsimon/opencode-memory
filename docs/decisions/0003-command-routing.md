@@ -8,7 +8,7 @@ Accepted
 
 OpenCode memory management commands will need to invoke deterministic database operations and return their results without asking the model to invent or infer state. OpenCode 1.18.18 exposes command templates and the `command.execute.before` hook, but the verified hook contract limits what the plugin can do at that boundary.
 
-The verified limitation is: `command.execute.before` can only mutate the output `parts`; it cannot short-circuit command execution or directly return database results.
+The verified limitation is: `command.execute.before` can only mutate the output `parts`; it cannot short-circuit command execution and cannot directly return database results.
 
 ## Decision
 

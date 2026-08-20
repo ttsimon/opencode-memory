@@ -2,7 +2,7 @@
 
 ## Current implementation
 
-The published code is a health skeleton. It registers a single `memory` tool whose `health` action confirms that the OpenCode plugin loaded successfully.
+The current implementation is a health skeleton. It registers a single `memory` tool whose `health` action confirms that the OpenCode plugin loaded successfully.
 
 Persistent memory, recall, storage, lifecycle extraction, project resolution, Markdown projection, and management commands are not yet implemented. This document separates those planned boundaries from the functionality currently available.
 

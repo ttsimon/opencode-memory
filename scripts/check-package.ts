@@ -30,10 +30,15 @@ try {
   const entries = (await new Response(listing.stdout).text()).split(/\r?\n/u).filter(Boolean)
   if ((await listing.exited) !== 0) throw new Error("Package listing failed")
 
+  const missing = [...allowedEntries].filter((entry) => !entries.includes(entry))
   const unexpected = entries.filter((entry) => !allowedEntries.has(entry))
-  if (unexpected.length > 0) {
-    for (const entry of unexpected) console.error(`Unexpected package entry: ${entry}`)
-    throw new Error("Package contains unexpected entries")
+  for (const entry of missing) console.error(`Missing package entry: ${entry}`)
+  for (const entry of unexpected) console.error(`Unexpected package entry: ${entry}`)
+  if (entries.length !== allowedEntries.size) {
+    console.error(`Expected ${allowedEntries.size} package entries, found ${entries.length}`)
+  }
+  if (missing.length > 0 || unexpected.length > 0 || entries.length !== allowedEntries.size) {
+    throw new Error("Package entries do not match the allowlist")
   }
 } finally {
   await rm(packageDirectory, { recursive: true, force: true })

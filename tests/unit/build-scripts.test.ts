@@ -13,8 +13,12 @@ async function runScript(script: string, args: string[] = [], env: Record<string
     stdout: "pipe",
     stderr: "pipe",
   })
-  await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text()])
-  return child.exited
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ])
+  return { exitCode, stdout, stderr }
 }
 
 async function pathExists(path: string): Promise<boolean> {
@@ -39,7 +43,7 @@ describe("build scripts", () => {
   test("removes the temporary package directory when packing fails", async () => {
     await writeFile(join(fixtureDirectory, "package.json"), "not valid json\n")
 
-    expect(await runScript("check-package.ts")).not.toBe(0)
+    expect((await runScript("check-package.ts")).exitCode).not.toBe(0)
     expect(await pathExists(join(fixtureDirectory, ".tmp/package"))).toBe(false)
   })
 
@@ -57,8 +61,44 @@ describe("build scripts", () => {
     if (process.platform !== "win32") await chmod(tarPath, 0o755)
 
     const path = `${binDirectory}${delimiter}${process.env.PATH ?? ""}`
-    expect(await runScript("check-package.ts", [], { ...process.env, PATH: path })).not.toBe(0)
+    expect((await runScript("check-package.ts", [], { ...process.env, PATH: path })).exitCode).not.toBe(0)
     expect(await pathExists(join(fixtureDirectory, ".tmp/package"))).toBe(false)
+  })
+
+  test("fails when the package omits required README, LICENSE, and declaration entries", async () => {
+    await mkdir(join(fixtureDirectory, "dist"))
+    await writeFile(
+      join(fixtureDirectory, "package.json"),
+      JSON.stringify({ name: "fixture", version: "1.0.0", files: ["dist"] }),
+    )
+    await writeFile(join(fixtureDirectory, "dist/index.js"), "export {}\n")
+
+    const result = await runScript("check-package.ts")
+
+    expect(result.exitCode).not.toBe(0)
+    expect(result.stderr).toContain("Missing package entry: package/README.md")
+    expect(result.stderr).toContain("Missing package entry: package/LICENSE")
+    expect(result.stderr).toContain("Missing package entry: package/dist/index.d.ts")
+    expect(result.stderr).toContain("Expected 5 package entries, found 2")
+  })
+
+  test("fails when the package contains an unexpected entry or count", async () => {
+    await mkdir(join(fixtureDirectory, "dist"))
+    await writeFile(
+      join(fixtureDirectory, "package.json"),
+      JSON.stringify({ name: "fixture", version: "1.0.0", files: ["dist", "README.md", "LICENSE", "NOTICE.md"] }),
+    )
+    await writeFile(join(fixtureDirectory, "README.md"), "# Fixture\n")
+    await writeFile(join(fixtureDirectory, "LICENSE"), "MIT\n")
+    await writeFile(join(fixtureDirectory, "NOTICE.md"), "Notice\n")
+    await writeFile(join(fixtureDirectory, "dist/index.js"), "export {}\n")
+    await writeFile(join(fixtureDirectory, "dist/index.d.ts"), "export {}\n")
+
+    const result = await runScript("check-package.ts")
+
+    expect(result.exitCode).not.toBe(0)
+    expect(result.stderr).toContain("Unexpected package entry: package/NOTICE.md")
+    expect(result.stderr).toContain("Expected 5 package entries, found 6")
   })
 
   test.each([
@@ -69,16 +109,22 @@ describe("build scripts", () => {
     await mkdir(join(fixtureDirectory, "dist"))
     await writeFile(join(fixtureDirectory, "dist/bad.md"), content)
 
-    expect(await runScript("check-markdown.ts", ["dist/bad.md"])).not.toBe(0)
+    const result = await runScript("check-markdown.ts", ["dist/bad.md"])
+    expect(result.exitCode).not.toBe(0)
+    expect(result.stderr).toContain("dist/bad.md:1")
   })
 
   test("fails for an explicit non-Markdown file", async () => {
     await writeFile(join(fixtureDirectory, "notes.txt"), "valid\n")
 
-    expect(await runScript("check-markdown.ts", ["notes.txt"])).not.toBe(0)
+    const result = await runScript("check-markdown.ts", ["notes.txt"])
+    expect(result.exitCode).not.toBe(0)
+    expect(result.stderr).toContain("notes.txt:1")
   })
 
   test("fails for an explicit missing Markdown file", async () => {
-    expect(await runScript("check-markdown.ts", ["missing.md"])).not.toBe(0)
+    const result = await runScript("check-markdown.ts", ["missing.md"])
+    expect(result.exitCode).not.toBe(0)
+    expect(result.stderr).toContain("missing.md:1")
   })
 })
