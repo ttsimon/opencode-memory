@@ -12,4 +12,4 @@ List the commands run and their results.
 - [ ] OpenCode compatibility has been verified or marked not applicable.
 - [ ] Database migration requirements have been addressed or marked not applicable.
 - [ ] Documentation has been updated or marked not applicable.
-- [ ] A changeset has been added or marked not applicable.
+- [ ] Changeset has been added or marked not applicable.
