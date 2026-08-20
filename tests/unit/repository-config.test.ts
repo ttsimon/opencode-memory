@@ -17,5 +17,6 @@ describe("repository toolchain", () => {
     const bunfig = await readFile("bunfig.toml", "utf8")
     expect(bunfig).toContain("lines = 0.9")
     expect(bunfig).toContain("functions = 0.9")
+    expect(bunfig).toContain('"tests/helpers/**"')
   })
 })

@@ -4,7 +4,11 @@ import { startIsolatedOpenCodeServer } from "../helpers/opencode-server"
 let stop: (() => Promise<void>) | undefined
 
 afterEach(async () => {
-  await stop?.()
+  try {
+    await stop?.()
+  } finally {
+    stop = undefined
+  }
 })
 
 test("OpenCode 1.18.18 loads the built plugin and exposes its tool", async () => {
