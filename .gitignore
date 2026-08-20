@@ -1,0 +1,29 @@
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+*.tgz
+
+# Local tools and editors
+.mise.local.toml
+.idea/
+.vscode/
+.worktrees/
+
+# Runtime and test data
+*.db
+*.db-shm
+*.db-wal
+*.log
+.tmp/
+tmp/
+
+# OpenCode local state
+.opencode/
+opencode.json
+opencode.jsonc
+
+# Foreign package-manager lockfiles
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
