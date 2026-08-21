@@ -69,7 +69,9 @@ export interface TaskSnapshot {
   readonly sourceSessionId: string
 }
 
-export interface TaskSnapshotInput extends Omit<TaskSnapshot, "id" | "updatedAt"> {}
+export interface TaskSnapshotInput extends Omit<TaskSnapshot, "id" | "updatedAt"> {
+  readonly updatedAt?: string
+}
 
 export interface AuditEvent {
   readonly id: string

@@ -38,7 +38,12 @@ export async function openDatabase(paths: DataPaths, options: OpenDatabaseOption
         `Database schema version ${existingVersion} is newer than supported version ${highestSupportedVersion}`,
       )
     }
-    if (existingVersion === 0) await copyBackupFile(paths, 0)
+    if (existingVersion === 0) {
+      const checkpoint = new Database(paths.database, { strict: true })
+      checkpoint.exec("PRAGMA wal_checkpoint(TRUNCATE)")
+      checkpoint.close()
+      await copyBackupFile(paths, 0)
+    }
   }
   const database = new Database(paths.database, { create: true, strict: true })
   if (process.platform !== "win32") await chmod(paths.database, 0o600)

@@ -46,3 +46,16 @@ test("completed tasks are archived and not active", async () => {
     await fixture.close()
   }
 })
+
+test("older task snapshots cannot replace newer work", async () => {
+  const fixture = await createDatabaseFixture()
+  const repository = new TaskRepository(fixture.database)
+  const service = new TaskService(fixture.database, repository, new AuditRepository(fixture.database))
+  try {
+    service.replace({ ...snapshot("New task"), updatedAt: "2026-08-21T10:00:00.000Z" })
+    service.replace({ ...snapshot("Old task"), updatedAt: "2026-08-21T09:00:00.000Z" })
+    expect(service.getActive("project-1")?.goal).toBe("New task")
+  } finally {
+    await fixture.close()
+  }
+})

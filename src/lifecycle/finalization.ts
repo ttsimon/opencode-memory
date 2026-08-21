@@ -38,6 +38,8 @@ export async function finalizeSession(services: PluginServices, sessionId: strin
       .filter((todo) => todo.status !== "completed" && todo.status !== "cancelled")
       .map((todo) => todo.content)
     const assistantText = lastAssistant ? textContent(lastAssistant.parts) : ""
+    const assistantTime = lastAssistant?.info.role === "assistant" ? lastAssistant.info.time : undefined
+    const observedAt = new Date(assistantTime?.completed ?? assistantTime?.created ?? Date.now()).toISOString()
     const nextSteps = inProgress.length > 0 ? inProgress : extractNextSteps(assistantText)
     services.database.raw.transaction(() => {
       for (const message of messages) {
@@ -51,10 +53,9 @@ export async function finalizeSession(services: PluginServices, sessionId: strin
         })) {
           if (candidate.confidence >= 0.85) {
             const result = services.memory.remember(candidate)
-            if (result.outcome === "created") {
-              if (result.memory.scope === "project") projectMemoryChanged = true
-              else globalMemoryChanged = true
-            }
+            if (result.outcome === "rejected") continue
+            if (result.memory.scope === "project") projectMemoryChanged = true
+            else globalMemoryChanged = true
           }
         }
       }
@@ -72,14 +73,15 @@ export async function finalizeSession(services: PluginServices, sessionId: strin
           blockers: extractBlockers(assistantText).filter((item) => inspectSensitive(item).safe),
           nextSteps: nextSteps.filter((item) => inspectSensitive(item).safe),
           sourceSessionId: sessionId,
+          updatedAt: observedAt,
         })
-      services.database?.raw
-        .query("INSERT INTO processed_events (event_key, processed_at) VALUES (?, ?)")
-        .run(eventKey, new Date().toISOString())
       services.database?.raw.query("DELETE FROM pending_events WHERE event_key = ?").run(pendingKey)
     })()
     if (projectMemoryChanged) await services.projection?.rebuildProject(services.project.projectId)
     if (globalMemoryChanged) await services.projection?.rebuildGlobal()
+    services.database.raw
+      .query("INSERT INTO processed_events (event_key, processed_at) VALUES (?, ?)")
+      .run(eventKey, new Date().toISOString())
   } catch (error) {
     recordPendingFailure(services, sessionId, pendingKey, error)
   }

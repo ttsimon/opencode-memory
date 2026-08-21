@@ -17,6 +17,7 @@ export class TaskService {
   replace(input: TaskSnapshotInput): TaskSnapshot {
     return this.database.raw.transaction(() => {
       const current = this.tasks.getActive(input.projectId)
+      if (current && input.updatedAt && input.updatedAt <= current.updatedAt) return current
       if (current && current.goal !== input.goal) {
         const archived = this.tasks.archiveActive(input.projectId)
         if (archived) this.audit.task("archive", archived, "active")

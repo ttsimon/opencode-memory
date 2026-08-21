@@ -219,3 +219,55 @@ test("idle extracts confirmed high-confidence decisions from the completed conve
     await context.fixture.close()
   }
 })
+
+test("projection failure retries without duplicating the task snapshot", async () => {
+  const context = await setup(async () => [
+    {
+      info: {
+        id: "m1",
+        sessionID: "s1",
+        role: "user",
+        time: { created: 1 },
+        agent: "build",
+        model: { providerID: "x", modelID: "x" },
+      },
+      parts: [textPart("m1", "We decided to implement retry safety")],
+    },
+    {
+      info: {
+        id: "m2",
+        sessionID: "s1",
+        role: "assistant",
+        parentID: "m1",
+        time: { created: 2 },
+        modelID: "x",
+        providerID: "x",
+        mode: "build",
+        path: { cwd: "C:/project", root: "C:/project" },
+        cost: 0,
+        tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+      },
+      parts: [textPart("m2", "Done")],
+    },
+  ])
+  let projectionAttempts = 0
+  ;(context.services as { projection?: PluginServices["projection"] }).projection = {
+    async rebuildProject() {
+      projectionAttempts += 1
+      if (projectionAttempts === 1) throw new Error("projection failed")
+    },
+    async rebuildGlobal() {},
+  } as never
+  try {
+    context.services.state.setTodos("s1", [{ id: "1", content: "Continue", status: "pending", priority: "high" }])
+    await context.hooks.event?.({ event: { type: "session.idle", properties: { sessionID: "s1" } } as never })
+    await context.hooks.event?.({ event: { type: "session.idle", properties: { sessionID: "s1" } } as never })
+    expect(projectionAttempts).toBe(2)
+    expect(context.services.tasks?.list("project-1")).toHaveLength(1)
+    expect(context.fixture.database.raw.query("SELECT COUNT(*) AS count FROM processed_events").get()).toEqual({
+      count: 1,
+    })
+  } finally {
+    await context.fixture.close()
+  }
+})

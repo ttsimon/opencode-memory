@@ -20,7 +20,11 @@ export class TaskRepository {
   constructor(private readonly database: MemoryDatabase) {}
 
   insert(input: TaskSnapshotInput): TaskSnapshot {
-    const task: TaskSnapshot = { ...input, id: crypto.randomUUID(), updatedAt: new Date().toISOString() }
+    const task: TaskSnapshot = {
+      ...input,
+      id: crypto.randomUUID(),
+      updatedAt: input.updatedAt ?? new Date().toISOString(),
+    }
     this.database.raw
       .query(`
         INSERT INTO task_snapshots (
