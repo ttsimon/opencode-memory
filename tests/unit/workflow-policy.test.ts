@@ -27,6 +27,7 @@ test("security and release workflows use pinned actions and scoped permissions",
   expect(security).toContain("github/codeql-action/init@3599b3baa15b485a2e49ef411a7a4bb2452e7f93")
   expect(security).toContain("github/codeql-action/analyze@3599b3baa15b485a2e49ef411a7a4bb2452e7f93")
   expect(security).toContain("gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7")
+  expect(security).toContain("GITHUB_TOKEN: $" + "{{ github.token }}")
   expect(security).toContain("actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294")
   expect(security).not.toContain("contents: write")
 
