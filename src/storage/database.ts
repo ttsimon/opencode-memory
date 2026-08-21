@@ -24,6 +24,8 @@ interface OpenDatabaseOptions {
 
 export async function openDatabase(paths: DataPaths, options: OpenDatabaseOptions = {}): Promise<MemoryDatabase> {
   await ensureDataPaths(paths, process.platform)
+  const requestedMigrations = options.migrations ?? defaultMigrations
+  const highestSupportedVersion = Math.max(0, ...requestedMigrations.map((migration) => migration.version))
   const existingSize = await stat(paths.database)
     .then((metadata) => metadata.size)
     .catch(() => 0)
@@ -31,6 +33,11 @@ export async function openDatabase(paths: DataPaths, options: OpenDatabaseOption
     const probe = new Database(paths.database, { readonly: true, strict: true })
     const existingVersion = readUserVersion(probe)
     probe.close()
+    if (existingVersion > highestSupportedVersion) {
+      throw new Error(
+        `Database schema version ${existingVersion} is newer than supported version ${highestSupportedVersion}`,
+      )
+    }
     if (existingVersion === 0) await copyBackupFile(paths, 0)
   }
   const database = new Database(paths.database, { create: true, strict: true })
@@ -45,7 +52,7 @@ export async function openDatabase(paths: DataPaths, options: OpenDatabaseOption
   `)
 
   try {
-    await applyMigrations(database, paths, options.migrations ?? defaultMigrations)
+    await applyMigrations(database, paths, requestedMigrations)
   } catch (error) {
     database.close()
     throw error

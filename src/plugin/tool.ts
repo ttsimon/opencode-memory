@@ -40,14 +40,16 @@ export function createMemoryTool(services: PluginServices) {
             return JSON.stringify({ scope: projectId, memories, task }, null, 2)
           }
           case "status":
-            return JSON.stringify(
-              {
-                enabled: isProjectEnabled(services, projectId),
-                runtime: services.runtime.status(),
-                session: services.state.get(context.sessionID),
-              },
-              null,
-              2,
+            return redactDiagnostic(
+              JSON.stringify(
+                {
+                  enabled: isProjectEnabled(services, projectId),
+                  runtime: services.runtime.status(),
+                  session: services.state.get(context.sessionID),
+                },
+                null,
+                2,
+              ),
             )
           case "search":
             return JSON.stringify(services.memory.search(arguments_.query ?? arguments_.text ?? "", projectId), null, 2)

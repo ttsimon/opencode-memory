@@ -184,8 +184,7 @@ export function createHooks(services: PluginServices): Hooks {
         updateTodos(services, properties.sessionID, properties.todos)
       }
       if (event.type === "file.edited") {
-        const properties = event.properties as { file: string }
-        services.state.addCurrentFileToAll(properties.file)
+        // OpenCode 1.18.18 does not include a session ID, so attribution would leak context across sessions.
       }
       if (event.type === "session.idle") {
         const properties = event.properties as { sessionID: string }

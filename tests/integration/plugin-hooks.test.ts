@@ -142,10 +142,10 @@ test("file events populate later session state and session deletion cleans it", 
   const context = await setup()
   try {
     await context.hooks.event?.({ event: { type: "file.edited", properties: { file: "src/new.ts" } } as never })
-    expect(context.services.state.get("later").currentFiles).toEqual(["src/new.ts"])
+    expect(context.services.state.get("later").currentFiles).toEqual([])
     context.services.state.recordWrite("later", { outcome: "created", id: "m1" })
     await context.hooks.event?.({ event: { type: "session.deleted", properties: { info: { id: "later" } } } as never })
-    expect(context.services.state.get("later").currentFiles).toEqual(["src/new.ts"])
+    expect(context.services.state.get("later").currentFiles).toEqual([])
     expect(context.services.state.get("later").lastWrites).toEqual([])
   } finally {
     await context.close()

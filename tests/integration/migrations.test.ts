@@ -94,3 +94,14 @@ test("sorts migration backups by timestamp instead of version text", () => {
     "memory-v11-100-c.db",
   ])
 })
+
+test("rejects a database created by a newer schema before writing", async () => {
+  const fixture = await createDatabaseFixture([versionOne])
+  fixture.database.raw.exec("PRAGMA user_version = 99")
+  fixture.database.close()
+  try {
+    await expect(openDatabase(fixture.paths, { migrations: [versionOne] })).rejects.toThrow("newer than supported")
+  } finally {
+    await fixture.close()
+  }
+})

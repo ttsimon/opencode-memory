@@ -119,3 +119,17 @@ test("memory tool redacts sensitive runtime errors", async () => {
   expect(result).not.toContain("hunter2")
   expect(result).toContain("[REDACTED:password]")
 })
+
+test("status redacts sensitive session strings", async () => {
+  const fixture = await setup()
+  try {
+    fixture.services.state.setTodos("s1", [
+      { id: "1", content: "password=hunter2", status: "pending", priority: "high" },
+    ])
+    const result = String(await fixture.tool.execute({ action: "status" }, context))
+    expect(result).not.toContain("hunter2")
+    expect(result).toContain("[REDACTED:password]")
+  } finally {
+    await fixture.fixture.close()
+  }
+})
