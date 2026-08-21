@@ -174,3 +174,43 @@ test("completed todos archive the active task instead of creating another active
     await context.fixture.close()
   }
 })
+
+test("idle extracts confirmed high-confidence decisions from the completed conversation", async () => {
+  const context = await setup(async () => [
+    {
+      info: {
+        id: "m1",
+        sessionID: "s1",
+        role: "user",
+        time: { created: 1 },
+        agent: "build",
+        model: { providerID: "x", modelID: "x" },
+      },
+      parts: [textPart("m1", "We decided to keep SQLite as the source of truth")],
+    },
+    {
+      info: {
+        id: "m2",
+        sessionID: "s1",
+        role: "assistant",
+        parentID: "m1",
+        time: { created: 2 },
+        modelID: "x",
+        providerID: "x",
+        mode: "build",
+        path: { cwd: "C:/project", root: "C:/project" },
+        cost: 0,
+        tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+      },
+      parts: [textPart("m2", "Decision confirmed and implemented.")],
+    },
+  ])
+  try {
+    await context.hooks.event?.({ event: { type: "session.idle", properties: { sessionID: "s1" } } as never })
+    expect(context.services.memories?.listByStatus("active")).toContainEqual(
+      expect.objectContaining({ kind: "decision", content: "We decided to keep SQLite as the source of truth" }),
+    )
+  } finally {
+    await context.fixture.close()
+  }
+})

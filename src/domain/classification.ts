@@ -1,8 +1,9 @@
 import type { MemoryCandidate, MemoryKind, MemoryScope } from "./types"
 
 export function classifyManualMemory(text: string, projectId: string): MemoryCandidate {
+  const projectScope = /\b(for this project|in this repo)\b|本项目|这个仓库/i.test(text)
   const globalScope = /\b(always|across all projects|all projects|from now on)\b|以后|始终|所有项目/i.test(text)
-  const scope: MemoryScope = globalScope ? "global" : "project"
+  const scope: MemoryScope = projectScope ? "project" : globalScope ? "global" : "project"
   const kind = classifyKind(text, scope)
   const conflictKey = inferConflictKey(kind, text)
   return {

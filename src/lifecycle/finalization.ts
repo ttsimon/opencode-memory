@@ -2,6 +2,7 @@ import type { Message, Part, Todo } from "@opencode-ai/sdk"
 import type { PluginServices } from "../plugin/hooks"
 import { inspectSensitive } from "../security/filter"
 import { redactDiagnostic } from "../security/redaction"
+import { extractImmediateCandidates } from "./extraction"
 
 export interface SessionMessage {
   readonly info: Message
@@ -37,6 +38,18 @@ export async function finalizeSession(services: PluginServices, sessionId: strin
     const assistantText = lastAssistant ? textContent(lastAssistant.parts) : ""
     const nextSteps = inProgress.length > 0 ? inProgress : extractNextSteps(assistantText)
     services.database.raw.transaction(() => {
+      for (const message of messages) {
+        if (message.info.role !== "user" || !services.memory) continue
+        const text = textContent(message.parts)
+        for (const candidate of extractImmediateCandidates({
+          text,
+          projectId: services.project?.projectId ?? "",
+          sessionId,
+          messageId: message.info.id,
+        })) {
+          if (candidate.confidence >= 0.85) services.memory.remember(candidate)
+        }
+      }
       const allCompleted = safeTodos.length > 0 && safeTodos.every((todo) => todo.status === "completed")
       if (allCompleted) services.taskService?.archive(services.project?.projectId ?? "", "completed")
       else

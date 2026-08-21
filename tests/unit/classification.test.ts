@@ -30,3 +30,10 @@ test("package-manager corrections share a stable conflict key", () => {
     classifyManualMemory("For this project, use bun", "p1").conflictKey,
   )
 })
+
+test("explicit project wording overrides global persistence wording", () => {
+  expect(classifyManualMemory("Always use bun for this project", "p1")).toMatchObject({
+    scope: "project",
+    projectId: "p1",
+  })
+})

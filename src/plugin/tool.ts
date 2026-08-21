@@ -80,7 +80,8 @@ export function createMemoryTool(services: PluginServices) {
             })
             if (result.outcome === "ambiguous") return `Multiple matches; specify an ID: ${result.ids.join(", ")}`
             if (result.outcome === "not_found") return "Memory not found."
-            if (before?.scope === "global") await rebuildGlobalProjection(services)
+            const deleted = services.memory.get(result.id)
+            if (before?.scope === "global" || deleted?.scope === "global") await rebuildGlobalProjection(services)
             else await rebuildProjection(services, projectId)
             return `Soft-deleted memory ${result.id}.`
           }

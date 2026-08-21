@@ -5,6 +5,7 @@ import type { PluginServices } from "../../src/plugin/hooks"
 import { createRuntime } from "../../src/plugin/runtime"
 import { SessionState } from "../../src/plugin/session-state"
 import { createMemoryTool } from "../../src/plugin/tool"
+import { MarkdownProjection } from "../../src/projection/markdown"
 import { RecallEngine } from "../../src/recall/engine"
 import { AuditRepository } from "../../src/storage/audit-repository"
 import { MemoryRepository } from "../../src/storage/memory-repository"
@@ -34,6 +35,7 @@ async function setup() {
     memories,
     tasks,
     recall: new RecallEngine(memories, tasks),
+    projection: new MarkdownProjection(fixture.paths, memories),
     state: new SessionState(),
     runtime: createRuntime(fake.client, "C:/project"),
     project: { projectId: "project-1", root: "C:/project", identity: "path:C:/project", kind: "path" },
@@ -64,6 +66,11 @@ test("memory tool covers MVP management actions", async () => {
     expect(
       String(await fixture.tool.execute({ action: "remember", text: "Always answer me in Chinese" }, context)),
     ).toContain("Saved global preference")
+    expect(await Bun.file(`${fixture.fixture.paths.global}/MEMORY.md`).exists()).toBe(true)
+    expect(String(await fixture.tool.execute({ action: "forget", query: "Chinese" }, context))).toContain(
+      "Soft-deleted",
+    )
+    expect(await Bun.file(`${fixture.fixture.paths.global}/MEMORY.md`).text()).not.toContain("Chinese")
     expect(await fixture.tool.execute({ action: "forget", id }, context)).toBe(`Soft-deleted memory ${id}.`)
     expect(await fixture.tool.execute({ action: "forget", id }, context)).toBe("Memory not found.")
   } finally {
