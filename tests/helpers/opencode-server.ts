@@ -37,6 +37,18 @@ interface TerminateOptions {
   timeoutMs?: number
 }
 
+interface StopServerResourcesInput {
+  child: ProcessHandle
+  cleanup: {
+    remove(environment?: Record<string, string | undefined>, timeoutMs?: number): Promise<void>
+  }
+  environment?: Record<string, string | undefined>
+  processTimeoutMs?: number
+  stderrReader: Promise<void>
+  temporaryRoot: string
+  terminate?: (child: ProcessHandle, options: TerminateOptions) => Promise<void>
+}
+
 export interface RunningOpenCode {
   baseUrl: string
   projectDir: string
@@ -260,6 +272,32 @@ export function createTemporaryRootCleanup(temporaryRoot: string, remove: () => 
   }
 }
 
+export async function stopServerResources(input: StopServerResourcesInput): Promise<void> {
+  const environment = input.environment ?? process.env
+  const processTimeoutMs = input.processTimeoutMs ?? stopTimeoutMs
+  let processFailure: unknown
+
+  try {
+    await (input.terminate ?? terminateProcess)(input.child, { timeoutMs: processTimeoutMs })
+    await settleWithin(input.stderrReader, processTimeoutMs)
+  } catch (error) {
+    processFailure = error
+  }
+
+  try {
+    await input.cleanup.remove(environment, processTimeoutMs)
+  } catch (cleanupError) {
+    const processReason = processFailure ? `${errorText(processFailure)}\n` : ""
+    throw new Error(
+      redactOutput(`${processReason}Cleanup failed: ${errorText(cleanupError)}`, input.temporaryRoot, environment),
+    )
+  }
+
+  if (processFailure) {
+    throw new Error(redactOutput(errorText(processFailure), input.temporaryRoot, environment))
+  }
+}
+
 async function seedPluginDependency(directory: string): Promise<void> {
   const pluginPackageDir = join(directory, "node_modules", "@opencode-ai", "plugin")
   const dependencies = { "@opencode-ai/plugin": expectedVersion }
@@ -367,23 +405,13 @@ export async function startIsolatedOpenCodeServer(input: StartOpenCodeInput): Pr
     let stopped = false
     const stop = async () => {
       if (stopped) return
-      const stopDeadline = Date.now() + stopTimeoutMs
-      let stopFailure: unknown
-      try {
-        await terminateProcess(started.child, {
-          timeoutMs: Math.min(terminateStepTimeoutMs, Math.max(1, stopDeadline - Date.now())),
-        })
-        await settleWithin(started.stderrReader, Math.max(1, stopDeadline - Date.now()))
-      } catch (error) {
-        stopFailure = error
-      }
-      try {
-        await cleanup.remove(process.env, stopDeadline - Date.now())
-      } catch (cleanupError) {
-        const reason = stopFailure ? `${errorText(stopFailure)}\n` : ""
-        throw new Error(redactOutput(`${reason}Cleanup failed: ${errorText(cleanupError)}`, temporaryRoot))
-      }
-      if (stopFailure) throw new Error(redactOutput(errorText(stopFailure), temporaryRoot))
+      await stopServerResources({
+        child: started.child,
+        cleanup,
+        processTimeoutMs: stopTimeoutMs,
+        stderrReader: started.stderrReader,
+        temporaryRoot,
+      })
       stopped = true
     }
 

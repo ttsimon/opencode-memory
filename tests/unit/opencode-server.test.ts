@@ -4,6 +4,7 @@ import {
   createTemporaryRootCleanup,
   redactOutput,
   runWithPortRetries,
+  stopServerResources,
   terminateProcess,
 } from "../helpers/opencode-server"
 
@@ -208,6 +209,32 @@ test("temporary root cleanup appends a redacted cleanup failure to startup error
   ).rejects.toThrow(
     "startup failed token=<redacted:API_TOKEN>\nOpenCode stderr:\nstderr token=<redacted:API_TOKEN>\nCleanup failed: rm <temporary-root> token=<redacted:API_TOKEN>",
   )
+})
+
+test("server shutdown gives temporary-root cleanup an independent positive timeout", async () => {
+  let cleanupTimeout = 0
+
+  await stopServerResources({
+    child: {
+      exited: Promise.resolve(0),
+      exitCode: 0,
+      kill() {},
+      pid: 123,
+    },
+    cleanup: {
+      async remove(_environment, timeoutMs) {
+        cleanupTimeout = timeoutMs ?? 0
+      },
+    },
+    processTimeoutMs: 1,
+    stderrReader: Promise.resolve(),
+    temporaryRoot: "C:\\temp\\run",
+    terminate: async () => {
+      await Bun.sleep(5)
+    },
+  })
+
+  expect(cleanupTimeout).toBe(1)
 })
 
 test("runWithPortRetries retries address conflicts but respects its deadline", async () => {
