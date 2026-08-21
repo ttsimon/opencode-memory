@@ -2,7 +2,19 @@ import { tool } from "@opencode-ai/plugin"
 import { classifyManualMemory } from "../domain/classification"
 import type { PluginServices } from "./hooks"
 
-const actions = ["health", "overview", "status", "search", "show", "remember", "forget", "enable", "disable"] as const
+const actions = [
+  "health",
+  "overview",
+  "status",
+  "search",
+  "show",
+  "remember",
+  "forget",
+  "enable",
+  "disable",
+  "history",
+  "doctor",
+] as const
 
 export function createMemoryTool(services: PluginServices) {
   return tool({
@@ -69,6 +81,21 @@ export function createMemoryTool(services: PluginServices) {
         case "disable":
           setProjectEnabled(services, projectId, false)
           return "OpenCode Memory disabled for this project."
+        case "history": {
+          const events = services.memory.history(arguments_.id)
+          return events.length === 0
+            ? "No audit history found."
+            : events
+                .map(
+                  (event) =>
+                    `${event.createdAt} ${event.operation}: ${event.fromStatus ?? "none"} -> ${event.toStatus ?? "none"}; session: ${event.sourceSessionId ?? "none"}`,
+                )
+                .join("\n")
+        }
+        case "doctor":
+          return services.doctor
+            ? JSON.stringify(await services.doctor.run(services.project), null, 2)
+            : "OpenCode Memory doctor is unavailable."
       }
     },
   })

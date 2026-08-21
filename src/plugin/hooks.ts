@@ -1,11 +1,13 @@
 import type { Config, Hooks, PluginInput } from "@opencode-ai/plugin"
 import type { Part, Todo } from "@opencode-ai/sdk"
+import { MemoryDoctor } from "../diagnostics/doctor"
 import type { ProjectScope } from "../domain/types"
 import { extractImmediateCandidates } from "../lifecycle/extraction"
 import { finalizeSession, type SessionMessage, updateTodos } from "../lifecycle/finalization"
 import { MemoryService } from "../memory-service"
 import { resolveDataPaths } from "../paths"
 import { resolveProject } from "../project/resolver"
+import { MarkdownProjection } from "../projection/markdown"
 import { RecallEngine } from "../recall/engine"
 import { renderRecall } from "../recall/render"
 import { AuditRepository } from "../storage/audit-repository"
@@ -30,6 +32,8 @@ export interface PluginServices {
   readonly project?: ProjectScope
   readonly directory: string
   readonly degradedReason?: string
+  readonly doctor?: MemoryDoctor
+  readonly projection?: MarkdownProjection
   readonly messages?: (sessionId: string) => Promise<readonly SessionMessage[]>
   dispose(): void
 }
@@ -57,6 +61,8 @@ export async function createServices(
       runtime,
       project,
       directory: input.directory,
+      doctor: new MemoryDoctor(database, paths),
+      projection: new MarkdownProjection(paths, memories),
       messages: async (sessionId) => {
         const response = await input.client.session.messages({
           path: { id: sessionId },
@@ -127,7 +133,7 @@ export function createHooks(services: PluginServices): Hooks {
   )
 
   return {
-    config: services.runtime.guardHook("config", async (config: Config) => registerCommands(config, false)),
+    config: services.runtime.guardHook("config", async (config: Config) => registerCommands(config, true)),
     "chat.message": onChatMessage,
     "experimental.chat.system.transform": services.runtime.guardHook(
       "system.transform",

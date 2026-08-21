@@ -12,6 +12,11 @@ const commands = {
   "memory-disable": { action: "disable", description: "Disable memory for this project" },
 } as const
 
+const automaticCommands = {
+  "memory-history": { action: "history", description: "Show memory audit history" },
+  "memory-doctor": { action: "doctor", description: "Diagnose memory health" },
+} as const
+
 export const memoryCommandNames = Object.keys(commands) as Array<keyof typeof commands>
 
 export function registerCommands(config: Config, includeAutomatic: boolean): void {
@@ -23,13 +28,11 @@ export function registerCommands(config: Config, includeAutomatic: boolean): voi
     }
   }
   if (includeAutomatic) {
-    config.command["memory-history"] ??= {
-      description: "Show memory audit history",
-      template: commandInstruction("history", "$ARGUMENTS"),
-    }
-    config.command["memory-doctor"] ??= {
-      description: "Diagnose memory health",
-      template: commandInstruction("doctor", "$ARGUMENTS"),
+    for (const [name, definition] of Object.entries(automaticCommands)) {
+      config.command[name] ??= {
+        description: definition.description,
+        template: commandInstruction(definition.action, "$ARGUMENTS"),
+      }
     }
   }
 }
@@ -38,7 +41,9 @@ export function routeMemoryCommand(
   input: { readonly command: string; readonly arguments: string },
   output: { readonly parts: Part[] },
 ): void {
-  const definition = commands[input.command as keyof typeof commands]
+  const definition =
+    commands[input.command as keyof typeof commands] ??
+    automaticCommands[input.command as keyof typeof automaticCommands]
   if (!definition) return
   const text = output.parts.find((part) => part.type === "text")
   if (text?.type === "text") text.text = commandInstruction(definition.action, input.arguments)
