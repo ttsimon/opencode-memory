@@ -2,9 +2,9 @@
 
 ## Current implementation
 
-The current implementation is a health skeleton. It registers a single `memory` tool whose `health` action confirms that the OpenCode plugin loaded successfully.
+The current development branch implements the manual-memory MVP. SQLite is the structured source of truth; project resolution, sensitive filtering, FTS recall, task snapshots, audit history, management commands, and fail-open OpenCode hooks are implemented.
 
-Persistent memory, recall, storage, lifecycle extraction, project resolution, Markdown projection, and management commands are not yet implemented. This document separates those planned boundaries from the functionality currently available.
+Automatic extraction, idle finalization, compaction preservation, conflict replacement, Markdown projection, history commands, and doctor diagnostics remain in the automatic-memory phase.
 
 ## Intended boundaries
 

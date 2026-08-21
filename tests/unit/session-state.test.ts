@@ -38,3 +38,21 @@ test("cleanup removes all session data", () => {
   state.cleanup("s1")
   expect(state.get("s1").recall).toBeUndefined()
 })
+
+test("keeps only the ten newest unique recent topics", () => {
+  const state = new SessionState()
+  for (let index = 0; index < 12; index += 1) state.addRecentTopic("s1", `topic-${index}`)
+  state.addRecentTopic("s1", "topic-11")
+  expect(state.get("s1").recentTopics).toEqual([
+    "topic-2",
+    "topic-3",
+    "topic-4",
+    "topic-5",
+    "topic-6",
+    "topic-7",
+    "topic-8",
+    "topic-9",
+    "topic-10",
+    "topic-11",
+  ])
+})

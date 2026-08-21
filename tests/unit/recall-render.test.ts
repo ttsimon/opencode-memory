@@ -34,3 +34,26 @@ test("returns undefined for an empty recall", () => {
     }),
   ).toBeUndefined()
 })
+
+test("renders an active task snapshot", () => {
+  const rendered = renderRecall({
+    items: [],
+    task: {
+      id: "t1",
+      projectId: "p1",
+      goal: "Implement recall",
+      status: "active",
+      completed: [],
+      inProgress: [],
+      files: [],
+      decisions: [],
+      blockers: [],
+      nextSteps: ["Run tests"],
+      updatedAt: "2026-08-21T00:00:00.000Z",
+      sourceSessionId: "s1",
+    },
+    counts: { globalCore: 0, projectCore: 0, dynamic: 0, task: 1 },
+    estimatedTokens: 20,
+  })
+  expect(rendered).toContain("Goal: Implement recall; Next: Run tests")
+})

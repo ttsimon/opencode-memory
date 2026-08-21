@@ -1,0 +1,83 @@
+import { expect, test } from "bun:test"
+import type { ToolContext } from "@opencode-ai/plugin"
+import { MemoryService } from "../../src/memory-service"
+import type { PluginServices } from "../../src/plugin/hooks"
+import { createRuntime } from "../../src/plugin/runtime"
+import { SessionState } from "../../src/plugin/session-state"
+import { createMemoryTool } from "../../src/plugin/tool"
+import { RecallEngine } from "../../src/recall/engine"
+import { AuditRepository } from "../../src/storage/audit-repository"
+import { MemoryRepository } from "../../src/storage/memory-repository"
+import { TaskRepository } from "../../src/storage/task-repository"
+import { createDatabaseFixture } from "../helpers/database"
+import { createFakeRuntimeClient } from "../helpers/plugin"
+
+const context: ToolContext = {
+  sessionID: "s1",
+  messageID: "m1",
+  agent: "build",
+  directory: "C:/project",
+  worktree: "C:/project",
+  abort: new AbortController().signal,
+  metadata() {},
+  async ask() {},
+}
+
+async function setup() {
+  const fixture = await createDatabaseFixture()
+  const memories = new MemoryRepository(fixture.database)
+  const tasks = new TaskRepository(fixture.database)
+  const fake = createFakeRuntimeClient()
+  const services: PluginServices = {
+    database: fixture.database,
+    memory: new MemoryService(fixture.database, memories, new AuditRepository(fixture.database)),
+    memories,
+    tasks,
+    recall: new RecallEngine(memories, tasks),
+    state: new SessionState(),
+    runtime: createRuntime(fake.client, "C:/project"),
+    project: { projectId: "project-1", root: "C:/project", identity: "path:C:/project", kind: "path" },
+    directory: "C:/project",
+    dispose() {},
+  }
+  return { fixture, services, tool: createMemoryTool(services) }
+}
+
+test("memory tool covers MVP management actions", async () => {
+  const fixture = await setup()
+  try {
+    expect(await fixture.tool.execute({ action: "health" }, context)).toBe("OpenCode Memory is loaded.")
+    expect(await fixture.tool.execute({ action: "remember" }, context)).toBe("Memory text is required.")
+    const saved = String(await fixture.tool.execute({ action: "remember", text: "Tests use Bun" }, context))
+    const id = saved.match(/[0-9a-f-]{36}/i)?.[0]
+    expect(id).toBeDefined()
+    expect(String(await fixture.tool.execute({ action: "search", query: "Bun" }, context))).toContain("Tests use Bun")
+    expect(String(await fixture.tool.execute({ action: "show", id }, context))).toContain("Tests use Bun")
+    expect(String(await fixture.tool.execute({ action: "show", id: "missing" }, context))).toBe("Memory not found.")
+    expect(String(await fixture.tool.execute({ action: "overview" }, context))).toContain("project-1")
+    expect(String(await fixture.tool.execute({ action: "status" }, context))).toContain('"enabled": true')
+    expect(await fixture.tool.execute({ action: "disable" }, context)).toBe(
+      "OpenCode Memory disabled for this project.",
+    )
+    expect(String(await fixture.tool.execute({ action: "status" }, context))).toContain('"enabled": false')
+    expect(await fixture.tool.execute({ action: "enable" }, context)).toBe("OpenCode Memory enabled for this project.")
+    expect(await fixture.tool.execute({ action: "forget", id }, context)).toBe(`Soft-deleted memory ${id}.`)
+    expect(await fixture.tool.execute({ action: "forget", id }, context)).toBe("Memory not found.")
+  } finally {
+    await fixture.fixture.close()
+  }
+})
+
+test("degraded memory tool keeps health and reports unavailable storage", async () => {
+  const fake = createFakeRuntimeClient()
+  const services: PluginServices = {
+    state: new SessionState(),
+    runtime: createRuntime(fake.client, "C:/project"),
+    directory: "C:/project",
+    degradedReason: "database locked",
+    dispose() {},
+  }
+  const tool = createMemoryTool(services)
+  expect(await tool.execute({ action: "health" }, context)).toBe("OpenCode Memory is loaded.")
+  expect(await tool.execute({ action: "status" }, context)).toBe("OpenCode Memory is degraded: database locked")
+})

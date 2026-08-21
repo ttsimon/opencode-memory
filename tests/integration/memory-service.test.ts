@@ -88,3 +88,17 @@ test("forget by id performs a recoverable soft delete", async () => {
     await context.fixture.close()
   }
 })
+
+test("search, get and history expose current records", async () => {
+  const context = await createService()
+  try {
+    const created = context.service.remember(classifyManualMemory("Tests use Bun", "project-1"))
+    if (created.outcome === "rejected") throw new Error("unexpected rejection")
+    expect(context.service.search("Bun", "project-1").map((memory) => memory.id)).toEqual([created.memory.id])
+    expect(context.service.get(created.memory.id)?.content).toBe("Tests use Bun")
+    expect(context.service.history(created.memory.id).map((event) => event.operation)).toEqual(["create"])
+    expect(context.service.forget({ projectId: "project-1" })).toEqual({ outcome: "not_found" })
+  } finally {
+    await context.fixture.close()
+  }
+})

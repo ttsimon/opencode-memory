@@ -4,9 +4,20 @@ OpenCode Memory is an early-stage OpenCode plugin intended to provide local-only
 
 ## Project status
 
-The current package contains only a health skeleton that confirms the plugin is loaded. Memory features are not yet released. Do not rely on this version to store, recall, search, import, or manage memory. The approved engineering baseline is documented in [the repository standards](docs/superpowers/specs/2026-08-20-repository-engineering-standards-design.md).
+The current development branch implements the manual-memory MVP: local SQLite storage, global/project isolation, full-text recall, task snapshots, sensitive-value filtering, audit history, and management commands. Automatic memory extraction and idle-session finalization are still under development and are not yet released.
 
-The planned memory system will keep data on the user's machine and will not require an external memory service. That local-only goal describes the intended product architecture, not functionality available in the current package.
+Memory data remains on the user's machine and does not require an external memory service. The approved engineering baseline is documented in [the repository standards](docs/superpowers/specs/2026-08-20-repository-engineering-standards-design.md).
+
+## MVP commands
+
+- `/memory`
+- `/memory-status`
+- `/memory-search <query>`
+- `/memory-show <id>`
+- `/remember <text>`
+- `/forget <id or query>`
+- `/memory-enable`
+- `/memory-disable`
 
 ## Compatibility
 

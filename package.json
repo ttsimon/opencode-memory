@@ -47,7 +47,7 @@
     "test": "bun test tests/unit tests/integration",
     "test:coverage": "bun test tests/unit tests/integration --coverage",
     "clean": "bun run scripts/clean.ts",
-    "build": "bun run clean && bun build src/index.ts --outdir dist --target bun --format esm --external @opencode-ai/plugin --external @opencode-ai/sdk && tsc -p tsconfig.build.json",
+    "build": "bun run clean && bun build src/index.ts --outdir dist --target bun --format esm --external @opencode-ai/plugin --external @opencode-ai/sdk && tsc -p tsconfig.build.json && bun run scripts/clean-declarations.ts",
     "pack:check": "bun run scripts/check-package.ts",
     "check": "bun run format:check && bun run lint && bun run docs:check && bun run typecheck && bun run test:coverage && bun run build && bun run pack:check",
     "changeset": "changeset",
