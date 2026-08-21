@@ -1,6 +1,7 @@
 import { Database } from "bun:sqlite"
 import { expect, test } from "bun:test"
-import { readdir, rm } from "node:fs/promises"
+import { readdir, rm, stat } from "node:fs/promises"
+import { join } from "node:path"
 import {
   assertCheckpointComplete,
   type Migration,
@@ -33,7 +34,9 @@ test("migration failure rolls back and keeps a restorable backup", async () => {
     )
     const backups = await readdir(fixture.paths.backups)
     expect(backups).toHaveLength(1)
-    const backup = new Database(`${fixture.paths.backups}/${backups[0]}`, { readonly: true, strict: true })
+    const backupPath = join(fixture.paths.backups, backups[0] ?? "missing")
+    expect((await stat(backupPath)).size).toBeGreaterThan(0)
+    const backup = new Database(backupPath, { readonly: true, strict: true })
     try {
       expect(backup.query("PRAGMA integrity_check").get()).toEqual({ integrity_check: "ok" })
       expect(backup.query("PRAGMA user_version").get()).toEqual({ user_version: 1 })
@@ -83,7 +86,7 @@ test("backs up an existing version-zero database before framework metadata is ad
     const database = await openDatabase(fixture.paths, { migrations: [versionOne] })
     database.close()
     const backups = await readdir(fixture.paths.backups)
-    const backup = new Database(`${fixture.paths.backups}/${backups[0]}`, { readonly: true })
+    const backup = new Database(join(fixture.paths.backups, backups[0] ?? "missing"), { readonly: true })
     expect(backup.query("SELECT value FROM legacy").get()).toEqual({ value: "keep" })
     expect(backup.query("SELECT name FROM sqlite_master WHERE name = 'schema_migrations'").get()).toBeNull()
     backup.close()
