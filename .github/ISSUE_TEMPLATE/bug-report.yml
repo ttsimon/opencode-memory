@@ -1,0 +1,54 @@
+name: Bug report
+description: Report a reproducible problem
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Do not include secrets, credentials, tokens, private memory data, or `.env` contents.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Describe the problem and what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Provide a minimal, sanitized reproduction using synthetic data only.
+      placeholder: |
+        1. Run ...
+        2. Configure ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions
+      description: List the opencode-memory, OpenCode, Bun, and operating system versions.
+      placeholder: |
+        opencode-memory:
+        OpenCode:
+        Bun:
+        Operating system:
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized diagnostics
+      description: Include only relevant logs after removing secrets, personal data, paths, and private memory content.
+    validations:
+      required: false
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Data safety
+      options:
+        - label: I have not included secrets, credentials, tokens, private memory data, or `.env` contents.
+          required: true
