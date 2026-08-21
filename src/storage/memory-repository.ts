@@ -21,6 +21,10 @@ interface MemoryRow {
   supersedes_id: string | null
 }
 
+interface RankedMemoryRow extends MemoryRow {
+  rank: number
+}
+
 export class MemoryRepository {
   constructor(private readonly database: MemoryDatabase) {}
 
@@ -133,6 +137,56 @@ export class MemoryRepository {
       `)
       .all(pattern, projectId ?? null)
       .map(mapMemory)
+  }
+
+  listCore(
+    scope: "global" | "project",
+    projectId: string | null,
+    kind: "preference" | "rule",
+    limit: number,
+  ): MemoryRecord[] {
+    return this.database.raw
+      .query<MemoryRow, [string, string | null, string, number]>(`
+        SELECT * FROM memories
+        WHERE scope = ? AND project_id IS ? AND kind = ? AND status = 'active'
+          AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+        ORDER BY importance DESC, confidence DESC, updated_at DESC
+        LIMIT ?
+      `)
+      .all(scope, projectId, kind, limit)
+      .map(mapMemory)
+  }
+
+  searchFts(
+    ftsQuery: string,
+    projectId: string,
+    now: string,
+    limit: number,
+  ): Array<{ memory: MemoryRecord; rank: number }> {
+    return this.database.raw
+      .query<RankedMemoryRow, [string, string, string, number]>(`
+        SELECT memories.*, bm25(memory_fts) AS rank
+        FROM memory_fts
+        JOIN memories ON memories.rowid = memory_fts.rowid
+        WHERE memory_fts MATCH ?
+          AND memories.status = 'active'
+          AND (memories.expires_at IS NULL OR memories.expires_at > ?)
+          AND (memories.scope = 'global' OR memories.project_id = ?)
+        ORDER BY rank ASC
+        LIMIT ?
+      `)
+      .all(ftsQuery, now, projectId, limit)
+      .map((row) => ({ memory: mapMemory(row), rank: row.rank }))
+  }
+
+  markRecalled(ids: readonly string[], recalledAt: string): void {
+    const update = this.database.raw.query(
+      "UPDATE memories SET recall_count = recall_count + 1, last_recalled_at = ? WHERE id = ?",
+    )
+    const transaction = this.database.raw.transaction((memoryIds: readonly string[]) => {
+      for (const id of memoryIds) update.run(recalledAt, id)
+    })
+    transaction(ids)
   }
 
   softDelete(id: string): MemoryRecord | undefined {
