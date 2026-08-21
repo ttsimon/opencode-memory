@@ -1,4 +1,7 @@
 import { expect, test } from "bun:test"
+import { mkdtemp, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import type { Hooks, PluginInput } from "@opencode-ai/plugin"
 import type { Part } from "@opencode-ai/sdk"
 import { classifyManualMemory } from "../../src/domain/classification"
@@ -186,6 +189,44 @@ test("service construction closes storage when project resolution fails", async 
       createRuntime(fake.client, directory),
     ),
   ).rejects.toThrow()
+})
+
+test("service message adapter calls the OpenCode SDK with the current directory and limit", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "opencode-memory-service-messages-"))
+  const dataRoot = await mkdtemp(join(tmpdir(), "opencode-memory-service-data-"))
+  const previousLocalAppData = process.env.LOCALAPPDATA
+  process.env.LOCALAPPDATA = dataRoot
+  let received: unknown
+  try {
+    const services = await createServices(
+      {
+        client: {
+          session: {
+            async messages(input: unknown) {
+              received = input
+              return { data: [], error: undefined }
+            },
+          },
+        } as unknown as PluginInput["client"],
+        project: {} as PluginInput["project"],
+        directory,
+        worktree: directory,
+        experimental_workspace: { register() {} },
+        serverUrl: new URL("http://localhost"),
+        $: {} as PluginInput["$"],
+      },
+      undefined,
+      createRuntime(createFakeRuntimeClient().client, directory),
+    )
+    expect(await services.messages?.("s1")).toEqual([])
+    expect(received).toEqual({ path: { id: "s1" }, query: { directory, limit: 100 } })
+    services.dispose()
+  } finally {
+    if (previousLocalAppData === undefined) delete process.env.LOCALAPPDATA
+    else process.env.LOCALAPPDATA = previousLocalAppData
+    await rm(directory, { recursive: true, force: true })
+    await rm(dataRoot, { recursive: true, force: true })
+  }
 })
 
 test("createDegradedServices records Error and non-Error reasons", () => {

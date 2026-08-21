@@ -36,6 +36,8 @@ test("OpenCode 1.18.18 loads the built plugin, tool and MVP commands", async () 
       "forget",
       "memory-enable",
       "memory-disable",
+      "memory-history",
+      "memory-doctor",
     ]),
   )
   expect(server.stderr()).not.toContain("failed to load plugin")

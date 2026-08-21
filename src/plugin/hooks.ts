@@ -124,6 +124,7 @@ export function createHooks(services: PluginServices): Hooks {
           if (result.outcome === "created") {
             created += 1
             services.state.recordWrite(input.sessionID, { outcome: result.outcome, id: result.memory.id })
+            if (result.memory.scope === "project") await services.projection?.rebuildProject(services.project.projectId)
           }
         }
         if (created > 0)

@@ -2,9 +2,9 @@
 
 ## Current implementation
 
-The current development branch implements the manual-memory MVP. SQLite is the structured source of truth; project resolution, sensitive filtering, FTS recall, task snapshots, audit history, management commands, and fail-open OpenCode hooks are implemented.
+The current development branch implements the manual-memory MVP and automatic-memory phase. SQLite is the structured source of truth; project resolution, sensitive filtering, FTS recall, task snapshots, audit history, automatic extraction, idle finalization, compaction preservation, Markdown projection, diagnostics, and fail-open OpenCode hooks are implemented.
 
-Automatic extraction, idle finalization, compaction preservation, conflict replacement, Markdown projection, history commands, and doctor diagnostics remain in the automatic-memory phase.
+Markdown remains a one-way projection. Editing it does not update SQLite in this release.
 
 ## Intended boundaries
 

@@ -62,6 +62,7 @@ export function createMemoryTool(services: PluginServices) {
           })
           if (result.outcome === "rejected") return `Memory rejected: ${result.reasons.join(", ")}`
           services.state.recordWrite(context.sessionID, { outcome: result.outcome, id: result.memory.id })
+          if (result.memory.scope === "project") await rebuildProjection(services, projectId)
           return `Saved ${result.memory.scope} ${result.memory.kind} memory ${result.memory.id}.`
         }
         case "forget": {
@@ -73,6 +74,7 @@ export function createMemoryTool(services: PluginServices) {
           })
           if (result.outcome === "ambiguous") return `Multiple matches; specify an ID: ${result.ids.join(", ")}`
           if (result.outcome === "not_found") return "Memory not found."
+          await rebuildProjection(services, projectId)
           return `Soft-deleted memory ${result.id}.`
         }
         case "enable":
@@ -99,6 +101,15 @@ export function createMemoryTool(services: PluginServices) {
       }
     },
   })
+}
+
+async function rebuildProjection(services: PluginServices, projectId: string): Promise<void> {
+  if (!services.projection) return
+  try {
+    await services.projection.rebuildProject(projectId)
+  } catch (error) {
+    await services.runtime.reportError("projection", error)
+  }
 }
 
 export function isProjectEnabled(services: PluginServices, projectId: string): boolean {

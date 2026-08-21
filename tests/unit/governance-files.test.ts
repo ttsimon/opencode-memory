@@ -76,8 +76,8 @@ test("the code of conduct identifies Contributor Covenant 2.1 and a private cont
 test("public documentation describes the current project accurately", async () => {
   const readme = await readFile("README.md", "utf8")
   expect(readme).toContain("manual-memory MVP")
-  expect(readme).toContain("Automatic memory extraction")
-  expect(readme).toContain("not yet released")
+  expect(readme).toContain("automatic-memory phase")
+  expect(readme).toContain("idle-session finalization")
   expect(readme).toContain("OpenCode 1.18.18")
   expect(readme).toContain("Bun 1.3.14")
 
@@ -92,6 +92,7 @@ test("public documentation describes the current project accurately", async () =
   expect(architecture).toContain("local-only")
   expect(architecture).toContain("manual-memory MVP")
   expect(architecture).toContain("automatic-memory phase")
+  expect(architecture).toContain("Markdown remains a one-way projection")
   expect(architecture).not.toContain("The published code is")
 
   expect(await readFile("LICENSE", "utf8")).toContain("MIT License")
