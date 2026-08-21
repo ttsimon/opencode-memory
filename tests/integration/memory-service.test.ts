@@ -43,6 +43,26 @@ test("same source event is idempotent", async () => {
   }
 })
 
+test("duplicate updates are audited against the current source", async () => {
+  const context = await createService()
+  try {
+    context.service.remember({
+      ...classifyManualMemory("Tests run with bun test", "project-1"),
+      sourceSessionId: "first",
+      sourceMessageId: "m1",
+    })
+    const updated = context.service.remember({
+      ...classifyManualMemory("Tests run with bun test", "project-1"),
+      sourceSessionId: "second",
+      sourceMessageId: "m2",
+    })
+    if (updated.outcome === "rejected") throw new Error("unexpected rejection")
+    expect(context.audit.list(updated.memory.id).at(-1)?.sourceSessionId).toBe("second")
+  } finally {
+    await context.fixture.close()
+  }
+})
+
 test("rejects sensitive content before every persistent write", async () => {
   const context = await createService()
   try {

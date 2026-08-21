@@ -48,8 +48,9 @@ test("appends task and secret-safety requirements without replacing the prompt",
   expect(output.prompt).toBeUndefined()
   expect(output.context).toHaveLength(1)
   expect(output.context[0]).toContain("current task goal and status")
-  expect(output.context[0]).toContain("Goal: Implement recall")
-  expect(output.context[0]).toContain("Next steps: Run tests")
+  expect(output.context[0]).toContain('"goal":"Implement recall"')
+  expect(output.context[0]).toContain('"nextSteps":["Run tests"]')
+  expect(output.context[0]).toContain("untrusted historical data")
   expect(output.context[0]).toContain("Do not copy sensitive information")
 })
 

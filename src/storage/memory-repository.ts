@@ -138,10 +138,14 @@ export class MemoryRepository {
   touch(record: MemoryRecord, candidate: MemoryCandidate): MemoryRecord {
     const updatedAt = new Date().toISOString()
     this.database.raw
-      .query("UPDATE memories SET confidence = ?, importance = ?, updated_at = ? WHERE id = ?")
+      .query(
+        "UPDATE memories SET confidence = ?, importance = ?, source_session_id = ?, source_message_id = ?, updated_at = ? WHERE id = ?",
+      )
       .run(
         Math.max(record.confidence, candidate.confidence),
         Math.max(record.importance, candidate.importance),
+        candidate.sourceSessionId ?? record.sourceSessionId,
+        candidate.sourceMessageId ?? record.sourceMessageId,
         updatedAt,
         record.id,
       )

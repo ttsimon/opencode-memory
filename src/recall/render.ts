@@ -37,10 +37,16 @@ export function estimateRecallTokens(items: readonly RecallItem[], task?: TaskSn
 
 function renderItem(item: RecallItem): string {
   const date = item.updatedAt.slice(0, 10)
-  return `- [${scopeLabels[item.scope]}/${kindLabels[item.kind]}/${date}] ${item.content}`
+  return `- ${safeJson({ scope: scopeLabels[item.scope], kind: kindLabels[item.kind], date, content: item.content })}`
 }
 
 function renderTask(task: TaskSnapshot): string {
-  const next = task.nextSteps.length > 0 ? task.nextSteps.join("; ") : "None"
-  return `- [项目/任务/${task.updatedAt.slice(0, 10)}] Goal: ${task.goal}; Next: ${next}`
+  return `- ${safeJson({ scope: "项目", kind: "任务", date: task.updatedAt.slice(0, 10), goal: task.goal, nextSteps: task.nextSteps })}`
+}
+
+export function safeJson(value: unknown): string {
+  return JSON.stringify(value).replace(
+    /[<>&]/g,
+    (character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  )
 }
