@@ -60,17 +60,18 @@ test("terminateProcess reports failure when Windows remains alive after taskkill
     }),
   ).rejects.toThrow("did not exit after taskkill")
 
-  expect(signals).toEqual(["default"])
+  expect(signals).toEqual([])
   expect(taskkillCalls).toEqual([["/PID", "456", "/T", "/F"]])
 })
 
-test("terminateProcess uses taskkill when direct Windows termination throws", async () => {
+test("terminateProcess uses taskkill without terminating the Windows root process first", async () => {
   const taskkillCalls: string[][] = []
+  let directKillCalled = false
   const child = {
     exited: Promise.resolve(1),
     exitCode: null,
     kill() {
-      throw new Error("access denied")
+      directKillCalled = true
     },
     pid: 789,
   }
@@ -84,6 +85,7 @@ test("terminateProcess uses taskkill when direct Windows termination throws", as
   })
 
   expect(taskkillCalls).toEqual([["/PID", "789", "/T", "/F"]])
+  expect(directKillCalled).toBe(false)
 })
 
 test("terminateProcess always cleans the Windows process tree after direct child exit", async () => {
@@ -122,6 +124,25 @@ test("terminateProcess accepts localized taskkill failure after the child has ex
     },
     timeoutMs: 10,
   })
+})
+
+test("terminateProcess rejects taskkill exit 128 while the Windows process is still alive", async () => {
+  const child = {
+    exited: new Promise<number>(() => {}),
+    exitCode: null,
+    kill() {},
+    pid: 989,
+  }
+
+  await expect(
+    terminateProcess(child, {
+      platform: "win32",
+      runTaskkill: async () => {
+        throw Object.assign(new Error("没有运行的任务"), { exitCode: 128 })
+      },
+      timeoutMs: 10,
+    }),
+  ).rejects.toThrow("taskkill failed")
 })
 
 test("terminateProcess reports non-missing Windows process-tree cleanup failures", async () => {

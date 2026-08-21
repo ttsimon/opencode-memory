@@ -121,14 +121,6 @@ export async function terminateProcess(child: ProcessHandle, options: TerminateO
   const platform = options.platform ?? process.platform
 
   if (platform === "win32") {
-    if (child.exitCode === null) {
-      try {
-        child.kill()
-        await settleWithin(child.exited, timeoutMs)
-      } catch {
-        // taskkill below is authoritative for the full process tree.
-      }
-    }
     try {
       await requireWithin(
         (options.runTaskkill ?? defaultTaskkill)(["/PID", String(child.pid), "/T", "/F"]),
@@ -136,7 +128,7 @@ export async function terminateProcess(child: ProcessHandle, options: TerminateO
         `taskkill timed out after ${timeoutMs}ms`,
       )
     } catch (error) {
-      if (taskkillExitCode(error) === 128) return
+      if (taskkillExitCode(error) === 128 && (await settleWithin(child.exited, timeoutMs))) return
       throw new Error(`taskkill failed: ${errorText(error)}`)
     }
     if (await settleWithin(child.exited, timeoutMs)) return
