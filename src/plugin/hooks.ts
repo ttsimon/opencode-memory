@@ -23,7 +23,7 @@ export interface PluginServices {
   readonly memory?: MemoryService
   readonly memories?: MemoryRepository
   readonly tasks?: TaskRepository
-  readonly taskService?: TaskService
+  readonly taskService?: Pick<TaskService, "getActive" | "replace">
   readonly recall?: RecallEngine
   readonly state: SessionState
   readonly runtime: PluginRuntime
@@ -144,6 +144,30 @@ export function createHooks(services: PluginServices): Hooks {
       "command.before",
       async (input: { command: string; arguments: string }, output: { parts: Part[] }) =>
         routeMemoryCommand(input, output),
+    ),
+    "experimental.session.compacting": services.runtime.guardHook(
+      "session.compacting",
+      async (input: { sessionID: string }, output: { context: string[]; prompt?: string }) => {
+        const task = services.project ? services.taskService?.getActive(services.project.projectId) : undefined
+        const lines = [
+          "Preserve the current task goal and status.",
+          "Preserve key decisions and their reasons.",
+          "Preserve blockers, risks, relevant files, and next steps.",
+          "Do not copy sensitive information into the summary or memory candidates.",
+        ]
+        if (task) {
+          lines.push(
+            `Goal: ${task.goal}`,
+            `Status: ${task.status}`,
+            `Relevant files: ${task.files.join(", ") || "None"}`,
+            `Decisions: ${task.decisions.join("; ") || "None"}`,
+            `Blockers: ${task.blockers.join("; ") || "None"}`,
+            `Next steps: ${task.nextSteps.join("; ") || "None"}`,
+          )
+        }
+        output.context.push(lines.join("\n"))
+        services.state.addRecentTopic(input.sessionID, "compaction")
+      },
     ),
     event: services.runtime.guardHook("event", async ({ event }) => {
       if (event.type === "todo.updated") {
