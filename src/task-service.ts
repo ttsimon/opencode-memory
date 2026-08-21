@@ -31,11 +31,10 @@ export class TaskService {
     })()
   }
 
-  archive(projectId: string, reason: string, observedAt?: string, sourceSessionId?: string): TaskSnapshot | undefined {
+  archive(projectId: string, reason: string, observedAt?: string, _sourceSessionId?: string): TaskSnapshot | undefined {
     return this.database.raw.transaction(() => {
       const current = this.tasks.getActive(projectId)
-      if (current && sourceSessionId !== current.sourceSessionId && observedAt && observedAt <= current.updatedAt)
-        return current
+      if (current && observedAt && observedAt < current.updatedAt) return current
       const archived = this.tasks.archiveActive(projectId)
       if (archived) this.audit.task(`archive:${reason}`, archived, "active")
       return archived
