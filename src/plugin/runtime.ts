@@ -37,6 +37,7 @@ export interface PluginRuntime {
   ): (...arguments_: Arguments) => Promise<void>
   reportError(code: string, error: unknown): Promise<void>
   warnOnce(code: string, message: string): Promise<void>
+  notify(message: string, variant?: "info" | "success"): Promise<void>
   status(): RuntimeStatus
 }
 
@@ -79,6 +80,14 @@ export function createRuntime(client: RuntimeClient, directory: string): PluginR
       },
     reportError,
     warnOnce,
+    notify: async (message, variant = "info") => {
+      try {
+        await client.tui.showToast({
+          body: { title: "OpenCode Memory", message: redactDiagnostic(message), variant, duration: 4_000 },
+          query: { directory },
+        })
+      } catch {}
+    },
     status: () => ({ degraded: codes.size > 0, codes: [...codes] }),
   }
 }

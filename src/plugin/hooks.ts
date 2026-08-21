@@ -1,6 +1,7 @@
 import type { Config, Hooks, PluginInput } from "@opencode-ai/plugin"
 import type { Part } from "@opencode-ai/sdk"
 import type { ProjectScope } from "../domain/types"
+import { extractImmediateCandidates } from "../lifecycle/extraction"
 import { MemoryService } from "../memory-service"
 import { resolveDataPaths } from "../paths"
 import { resolveProject } from "../project/resolver"
@@ -71,7 +72,7 @@ export function createDegradedServices(runtime: PluginRuntime, directory: string
 export function createHooks(services: PluginServices): Hooks {
   const onChatMessage = services.runtime.guardHook(
     "chat.message",
-    async (input: { sessionID: string }, output: { parts: Part[] }) => {
+    async (input: { sessionID: string; messageID?: string }, output: { parts: Part[] }) => {
       if (!services.project || !services.recall || !isProjectEnabled(services, services.project.projectId)) return
       const text = output.parts
         .filter((part) => part.type === "text")
@@ -90,6 +91,24 @@ export function createHooks(services: PluginServices): Hooks {
           now: new Date(),
         }),
       )
+      if (services.memory && input.messageID) {
+        let created = 0
+        for (const candidate of extractImmediateCandidates({
+          text,
+          projectId: services.project.projectId,
+          sessionId: input.sessionID,
+          messageId: input.messageID,
+        })) {
+          if (candidate.confidence < 0.85) continue
+          const result = services.memory.remember(candidate)
+          if (result.outcome === "created") {
+            created += 1
+            services.state.recordWrite(input.sessionID, { outcome: result.outcome, id: result.memory.id })
+          }
+        }
+        if (created > 0)
+          await services.runtime.notify(`Saved ${created} memory item${created === 1 ? "" : "s"}.`, "success")
+      }
     },
   )
 

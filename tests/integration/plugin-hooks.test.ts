@@ -13,7 +13,12 @@ import { TaskRepository } from "../../src/storage/task-repository"
 import { createDatabaseFixture } from "../helpers/database"
 import { createFakeRuntimeClient } from "../helpers/plugin"
 
-async function setup(): Promise<{ services: PluginServices; hooks: Hooks; close(): Promise<void> }> {
+async function setup(): Promise<{
+  services: PluginServices
+  hooks: Hooks
+  toasts: Array<Record<string, unknown>>
+  close(): Promise<void>
+}> {
   const fixture = await createDatabaseFixture()
   const memories = new MemoryRepository(fixture.database)
   const audit = new AuditRepository(fixture.database)
@@ -33,7 +38,7 @@ async function setup(): Promise<{ services: PluginServices; hooks: Hooks; close(
     directory: "C:/project",
     dispose() {},
   }
-  return { services, hooks: createHooks(services), close: fixture.close }
+  return { services, hooks: createHooks(services), toasts: fake.toasts, close: fixture.close }
 }
 
 function userParts(text: string): Part[] {
@@ -65,6 +70,33 @@ test("prepares recall on chat.message and injects it into the matching session",
     expect(output.system.join("\n")).toContain("<opencode-memory>")
     expect(output.system.join("\n")).toContain("use bun for all scripts")
     expect(context.services.state.consumeRecall("s1")).toBeUndefined()
+  } finally {
+    await context.close()
+  }
+})
+
+test("chat.message automatically saves explicit high-confidence preferences once", async () => {
+  const context = await setup()
+  try {
+    const output = {
+      message: {
+        id: "m1",
+        sessionID: "s1",
+        role: "user" as const,
+        time: { created: Date.now() },
+        agent: "build",
+        model: { providerID: "test", modelID: "test" },
+      },
+      parts: userParts("Always answer me in Chinese"),
+    }
+    await context.hooks["chat.message"]?.({ sessionID: "s1", messageID: "m1" }, output)
+    await context.hooks["chat.message"]?.({ sessionID: "s1", messageID: "m1" }, output)
+    expect(context.services.memories?.count()).toBe(1)
+    expect(context.services.memories?.listByStatus("active")[0]).toMatchObject({
+      scope: "global",
+      kind: "preference",
+    })
+    expect(context.toasts.filter((toast) => toast.variant === "success")).toHaveLength(1)
   } finally {
     await context.close()
   }
