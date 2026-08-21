@@ -51,3 +51,36 @@ export interface DataPaths {
   readonly globalTopics: string
   readonly projects: string
 }
+
+export type TaskStatus = "active" | "completed" | "archived"
+
+export interface TaskSnapshot {
+  readonly id: string
+  readonly projectId: string
+  readonly goal: string
+  readonly status: TaskStatus
+  readonly completed: readonly string[]
+  readonly inProgress: readonly string[]
+  readonly files: readonly string[]
+  readonly decisions: readonly string[]
+  readonly blockers: readonly string[]
+  readonly nextSteps: readonly string[]
+  readonly updatedAt: string
+  readonly sourceSessionId: string
+}
+
+export interface TaskSnapshotInput extends Omit<TaskSnapshot, "id" | "updatedAt"> {}
+
+export interface AuditEvent {
+  readonly id: string
+  readonly entityType: "memory" | "task" | "filter"
+  readonly entityId: string | null
+  readonly operation: string
+  readonly sourceSessionId: string | null
+  readonly sourceMessageId: string | null
+  readonly fromStatus: string | null
+  readonly toStatus: string | null
+  readonly summary: string
+  readonly reasons: readonly string[]
+  readonly createdAt: string
+}
