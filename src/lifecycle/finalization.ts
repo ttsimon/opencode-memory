@@ -60,7 +60,8 @@ export async function finalizeSession(services: PluginServices, sessionId: strin
         }
       }
       const allCompleted = safeTodos.length > 0 && safeTodos.every((todo) => todo.status === "completed")
-      if (allCompleted) services.taskService?.archive(services.project?.projectId ?? "", "completed")
+      if (allCompleted)
+        services.taskService?.archive(services.project?.projectId ?? "", "completed", observedAt, sessionId)
       else
         services.taskService?.replace({
           projectId: services.project?.projectId ?? "",

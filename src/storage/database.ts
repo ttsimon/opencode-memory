@@ -40,7 +40,7 @@ export async function openDatabase(paths: DataPaths, options: OpenDatabaseOption
     }
     if (existingVersion === 0) {
       const checkpoint = new Database(paths.database, { strict: true })
-      checkpoint.exec("PRAGMA wal_checkpoint(TRUNCATE)")
+      assertCheckpointComplete(checkpoint.query<CheckpointResult, []>("PRAGMA wal_checkpoint(TRUNCATE)").get())
       checkpoint.close()
       await copyBackupFile(paths, 0)
     }
@@ -120,8 +120,18 @@ function readUserVersion(database: Database): number {
 }
 
 async function createMigrationBackup(database: Database, paths: DataPaths, version: number): Promise<void> {
-  database.exec("PRAGMA wal_checkpoint(TRUNCATE)")
+  assertCheckpointComplete(database.query<CheckpointResult, []>("PRAGMA wal_checkpoint(TRUNCATE)").get())
   await copyBackupFile(paths, version)
+}
+
+interface CheckpointResult {
+  busy: number
+  log: number
+  checkpointed: number
+}
+
+export function assertCheckpointComplete(result: CheckpointResult | null): void {
+  if (result?.busy !== 0) throw new Error("Cannot create a complete migration backup while the WAL is busy")
 }
 
 async function copyBackupFile(paths: DataPaths, version: number): Promise<void> {

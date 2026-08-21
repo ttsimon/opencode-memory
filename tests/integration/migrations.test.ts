@@ -1,7 +1,12 @@
 import { Database } from "bun:sqlite"
 import { expect, test } from "bun:test"
 import { readdir, rm } from "node:fs/promises"
-import { type Migration, openDatabase, sortBackupFilesNewestFirst } from "../../src/storage/database"
+import {
+  assertCheckpointComplete,
+  type Migration,
+  openDatabase,
+  sortBackupFilesNewestFirst,
+} from "../../src/storage/database"
 import { createDatabaseFixture } from "../helpers/database"
 
 const versionOne: Migration = {
@@ -104,4 +109,8 @@ test("rejects a database created by a newer schema before writing", async () => 
   } finally {
     await fixture.close()
   }
+})
+
+test("rejects a busy WAL checkpoint before backup", () => {
+  expect(() => assertCheckpointComplete({ busy: 1, log: 2, checkpointed: 1 })).toThrow("WAL is busy")
 })
