@@ -47,12 +47,12 @@ export class RecallEngine {
   recall(input: RecallInput): RecallResult {
     const now = input.now.toISOString()
     const candidates: ScoredMemory[] = [
-      ...this.memories.listCore("global", null, "preference", 8).map((memory) => ({
+      ...this.memories.listCore("global", null, "preference", 8, now).map((memory) => ({
         memory,
         group: "globalCore" as const,
         score: coreScore(memory, input.now, 1),
       })),
-      ...this.memories.listCore("project", input.projectId, "rule", 12).map((memory) => ({
+      ...this.memories.listCore("project", input.projectId, "rule", 12, now).map((memory) => ({
         memory,
         group: "projectCore" as const,
         score: coreScore(memory, input.now, 1.25),

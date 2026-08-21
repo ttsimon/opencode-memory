@@ -186,16 +186,17 @@ export class MemoryRepository {
     projectId: string | null,
     kind: "preference" | "rule",
     limit: number,
+    now: string,
   ): MemoryRecord[] {
     return this.database.raw
-      .query<MemoryRow, [string, string | null, string, number]>(`
+      .query<MemoryRow, [string, string | null, string, string, number]>(`
         SELECT * FROM memories
         WHERE scope = ? AND project_id IS ? AND kind = ? AND status = 'active'
-          AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+          AND (expires_at IS NULL OR datetime(expires_at) > datetime(?))
         ORDER BY importance DESC, confidence DESC, updated_at DESC
         LIMIT ?
       `)
-      .all(scope, projectId, kind, limit)
+      .all(scope, projectId, kind, now, limit)
       .map(mapMemory)
   }
 

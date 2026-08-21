@@ -22,6 +22,13 @@ test("history without arguments omits the optional id", () => {
   expect(config.command?.["memory-history"]?.template).not.toContain('id ""')
 })
 
+test("command arguments are JSON encoded inside routing instructions", () => {
+  const parts: Part[] = [{ type: "text", text: "", id: "p1", messageID: "m1", sessionID: "s1" }]
+  routeMemoryCommand({ command: "remember", arguments: 'say "hello"\nnext' }, { parts })
+  const text = parts[0]?.type === "text" ? parts[0].text : ""
+  expect(text).toContain('text "say \\"hello\\"\\nnext"')
+})
+
 test("routes command execution to one fixed memory tool action", () => {
   const parts: Part[] = [{ type: "text", text: "original", id: "p1", messageID: "m1", sessionID: "s1" }]
   routeMemoryCommand({ command: "memory-search", arguments: "sqlite" }, { parts })

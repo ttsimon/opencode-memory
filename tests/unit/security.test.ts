@@ -9,6 +9,8 @@ describe("sensitive information boundary", () => {
     ["-----BEGIN PRIVATE KEY-----\nabc", "private_key"],
     ["postgres://alice:secret@db.example/app", "connection_credential"],
     ["AWS_SECRET_ACCESS_KEY=abc123xyz", "env_secret"],
+    ["token=abc123xyz", "env_secret"],
+    ["Authorization: Bearer super-secret-token", "password"],
     ["4111 1111 1111 1111", "payment_or_identity"],
     ["11010519491231002X", "payment_or_identity"],
   ] satisfies ReadonlyArray<readonly [string, SensitiveReason]>)("rejects %s", (text, reason) => {
@@ -27,7 +29,7 @@ describe("sensitive information boundary", () => {
   test("reports overlapping categories without duplicating source text", () => {
     expect(inspectSensitive("PASSWORD=hunter2")).toEqual({
       safe: false,
-      reasons: ["password", "env_secret"],
+      reasons: ["password"],
     })
   })
 
@@ -50,5 +52,10 @@ describe("sensitive information boundary", () => {
     expect(diagnostic).toContain("[REDACTED:password]")
     expect(diagnostic).toContain("[REDACTED:connection_credential]")
     expect(diagnostic).toContain("[REDACTED:api_key]")
+  })
+
+  test("redacts the complete bearer token", () => {
+    const diagnostic = redactDiagnostic("Authorization: Bearer super-secret-token")
+    expect(diagnostic).not.toContain("super-secret-token")
   })
 })

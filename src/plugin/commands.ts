@@ -61,7 +61,7 @@ function commandInstruction(action: string, arguments_: string): string {
           ? "query"
           : undefined
   return [
-    `Call the memory tool exactly once with action "${action}"${argumentName ? ` and ${argumentName} "${arguments_}"` : arguments_ === "$ARGUMENTS" ? ` and map optional command arguments to ${action === "remember" ? "text" : ["show", "history"].includes(action) ? "id" : "query"}` : ""}.`,
+    `Call the memory tool exactly once with action "${action}"${argumentName ? ` and ${argumentName} ${JSON.stringify(arguments_)}` : arguments_ === "$ARGUMENTS" ? ` and map optional command arguments to ${action === "remember" ? "text" : ["show", "history"].includes(action) ? "id" : "query"}` : ""}.`,
     "Do not infer or invent database results.",
     "Return the tool output verbatim.",
   ].join("\n")

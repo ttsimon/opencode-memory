@@ -31,11 +31,11 @@ export const sensitiveRules: readonly SensitiveRule[] = [
   },
   {
     reason: "password",
-    pattern: /\b(?:password|passwd|pwd|cookie|authorization)\s*[:=]\s*[^\s,;]+/gi,
+    pattern: /\b(?:password|passwd|pwd|cookie)\s*[:=]\s*[^\s,;]+|\bauthorization\s*[:=]\s*(?:bearer\s+)?[^\s,;]+/gi,
   },
   {
     reason: "env_secret",
-    pattern: /\b[A-Z0-9_]*(?:SECRET|TOKEN|PRIVATE_KEY|API_KEY|PASSWORD)[A-Z0-9_]*\s*=\s*[^\s,;]+/g,
+    pattern: /\b[A-Z0-9_]*(?:SECRET|TOKEN|PRIVATE_KEY|API_KEY)[A-Z0-9_]*\s*=\s*[^\s,;]+/gi,
   },
   {
     reason: "payment_or_identity",

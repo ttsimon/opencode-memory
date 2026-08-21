@@ -145,3 +145,23 @@ test("project memory is selected before higher-scored global memory under a tigh
     await context.fixture.close()
   }
 })
+
+test("core memories expired earlier on the same day are excluded", async () => {
+  const context = await setup()
+  try {
+    context.service.remember({
+      ...classifyManualMemory("Always answer briefly", "alpha"),
+      expiresAt: "2026-08-21T08:00:00.000Z",
+    })
+    const result = context.recall.recall({
+      projectId: "alpha",
+      query: "briefly",
+      recentTopics: [],
+      currentFiles: [],
+      now: new Date("2026-08-21T12:00:00.000Z"),
+    })
+    expect(result.items).toEqual([])
+  } finally {
+    await context.fixture.close()
+  }
+})
