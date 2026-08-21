@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-OpenCode memory management commands will need to invoke deterministic database operations and return their results without asking the model to invent or infer state. OpenCode 1.18.18 exposes command templates and the `command.execute.before` hook, but the verified hook contract limits what the plugin can do at that boundary.
+OpenCode memory management commands will need to invoke deterministic database operations and return their results without asking the model to invent or infer state. OpenCode 1.18.19 exposes command templates and the `command.execute.before` hook, but the verified hook contract limits what the plugin can do at that boundary.
 
 The verified limitation is: `command.execute.before` can only mutate the output `parts`; it cannot short-circuit command execution and cannot directly return database results.
 
@@ -25,7 +25,7 @@ Keep database access inside the custom tool implementation. Do not place databas
 
 ## Consequences
 
-- Command routing respects the actual OpenCode 1.18.18 hook contract.
+- Command routing respects the actual OpenCode 1.18.19 hook contract.
 - Database behavior remains deterministic and testable inside the custom tool.
 - Named commands require a model-mediated tool call, so templates and hook mutations must strictly constrain that call and require verbatim output.
 - The hook cannot be treated as a direct command handler: it changes `parts` only and cannot bypass the remaining command execution path.

@@ -62,7 +62,7 @@ export interface RunningOpenCode {
   stop(): Promise<void>
 }
 
-const expectedVersion = "1.18.18"
+const expectedVersion = "1.18.19"
 const startupTimeoutMs = 15_000
 const stopTimeoutMs = 3_000
 const terminateStepTimeoutMs = 1_000

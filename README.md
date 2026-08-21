@@ -25,7 +25,7 @@ See [the usage guide](docs/usage.md) for data locations, recall rules, security 
 
 ## Compatibility
 
-Development is pinned to OpenCode 1.18.18 and Bun 1.3.14. See [the compatibility matrix](docs/compatibility.md) for the exact support policy.
+Development is pinned to OpenCode 1.18.19 and Bun 1.3.14. See [the compatibility matrix](docs/compatibility.md) for the exact support policy.
 
 ## Development
 

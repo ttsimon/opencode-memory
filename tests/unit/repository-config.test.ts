@@ -7,9 +7,9 @@ describe("repository toolchain", () => {
     const mise = await readFile(".mise.toml", "utf8")
 
     expect(packageJson.packageManager).toBe("bun@1.3.14")
-    expect(packageJson.dependencies["@opencode-ai/plugin"]).toBe("1.18.18")
-    expect(packageJson.dependencies["@opencode-ai/sdk"]).toBe("1.18.18")
-    expect(packageJson.devDependencies["opencode-ai"]).toBe("1.18.18")
+    expect(packageJson.dependencies["@opencode-ai/plugin"]).toBe("1.18.19")
+    expect(packageJson.dependencies["@opencode-ai/sdk"]).toBe("1.18.19")
+    expect(packageJson.devDependencies["opencode-ai"]).toBe("1.18.19")
     expect(mise).toContain('bun = "1.3.14"')
   })
 
