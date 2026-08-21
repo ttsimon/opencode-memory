@@ -12,6 +12,8 @@ export interface SessionMessage {
 export async function finalizeSession(services: PluginServices, sessionId: string): Promise<void> {
   if (!services.database || !services.project || !services.taskService || !services.messages) return
   let pendingKey = `idle:${sessionId}:unknown`
+  let projectMemoryChanged = false
+  let globalMemoryChanged = false
   try {
     const unknownFailure = services.database.raw
       .query<{ attempts: number }, [string]>("SELECT attempts FROM pending_events WHERE event_key = ?")
@@ -47,7 +49,13 @@ export async function finalizeSession(services: PluginServices, sessionId: strin
           sessionId,
           messageId: message.info.id,
         })) {
-          if (candidate.confidence >= 0.85) services.memory.remember(candidate)
+          if (candidate.confidence >= 0.85) {
+            const result = services.memory.remember(candidate)
+            if (result.outcome === "created") {
+              if (result.memory.scope === "project") projectMemoryChanged = true
+              else globalMemoryChanged = true
+            }
+          }
         }
       }
       const allCompleted = safeTodos.length > 0 && safeTodos.every((todo) => todo.status === "completed")
@@ -70,6 +78,8 @@ export async function finalizeSession(services: PluginServices, sessionId: strin
         .run(eventKey, new Date().toISOString())
       services.database?.raw.query("DELETE FROM pending_events WHERE event_key = ?").run(pendingKey)
     })()
+    if (projectMemoryChanged) await services.projection?.rebuildProject(services.project.projectId)
+    if (globalMemoryChanged) await services.projection?.rebuildGlobal()
   } catch (error) {
     recordPendingFailure(services, sessionId, pendingKey, error)
   }

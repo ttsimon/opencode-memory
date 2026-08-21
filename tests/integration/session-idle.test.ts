@@ -4,6 +4,7 @@ import { MemoryService } from "../../src/memory-service"
 import { createHooks, type PluginServices } from "../../src/plugin/hooks"
 import { createRuntime } from "../../src/plugin/runtime"
 import { SessionState } from "../../src/plugin/session-state"
+import { MarkdownProjection } from "../../src/projection/markdown"
 import { RecallEngine } from "../../src/recall/engine"
 import { AuditRepository } from "../../src/storage/audit-repository"
 import { MemoryRepository } from "../../src/storage/memory-repository"
@@ -29,6 +30,7 @@ async function setup(messages: NonNullable<PluginServices["messages"]>) {
     tasks,
     taskService: new TaskService(fixture.database, tasks, audit),
     recall: new RecallEngine(memories, tasks),
+    projection: new MarkdownProjection(fixture.paths, memories),
     state: new SessionState(),
     runtime: createRuntime(fake.client, "C:/project"),
     project: { projectId: "project-1", root: "C:/project", identity: "path:C:/project", kind: "path" },
@@ -209,6 +211,9 @@ test("idle extracts confirmed high-confidence decisions from the completed conve
     await context.hooks.event?.({ event: { type: "session.idle", properties: { sessionID: "s1" } } as never })
     expect(context.services.memories?.listByStatus("active")).toContainEqual(
       expect.objectContaining({ kind: "decision", content: "We decided to keep SQLite as the source of truth" }),
+    )
+    expect(await Bun.file(`${context.fixture.paths.projects}/project-1/MEMORY.md`).text()).toContain(
+      "We decided to keep SQLite as the source of truth",
     )
   } finally {
     await context.fixture.close()

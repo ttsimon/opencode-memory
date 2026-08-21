@@ -17,8 +17,8 @@ interface ExtractionRule {
 }
 
 const rules: readonly ExtractionRule[] = [
-  { pattern: /\b(always|from now on)\b|以后|始终/i, scope: "infer", kind: "preference", confidence: 0.95 },
   { pattern: /\b(for this project|in this repo)\b|本项目|这个仓库/i, scope: "project", kind: "rule", confidence: 0.92 },
+  { pattern: /\b(always|from now on)\b|以后|始终/i, scope: "infer", kind: "preference", confidence: 0.95 },
   {
     pattern: /\b(we decided|decision is|decided to)\b|已决定|确认采用|确定使用/i,
     scope: "project",

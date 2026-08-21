@@ -34,3 +34,10 @@ test("adds a stable conflict key for persistent corrections", () => {
     conflictKey: expect.any(String),
   })
 })
+
+test("project wording classifies always statements as project rules", () => {
+  expect(extractImmediateCandidates(turn("Always use bun for this project"))[0]).toMatchObject({
+    scope: "project",
+    kind: "rule",
+  })
+})

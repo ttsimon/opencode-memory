@@ -123,3 +123,25 @@ test("oversized task does not suppress higher-priority memories", async () => {
     await context.fixture.close()
   }
 })
+
+test("project memory is selected before higher-scored global memory under a tight budget", async () => {
+  const context = await setup()
+  try {
+    context.service.remember({
+      ...classifyManualMemory("Always prefer extremely verbose global explanations with many extra words", "alpha"),
+      importance: 1,
+    })
+    context.service.remember({ ...classifyManualMemory("For this project, use bun", "alpha"), importance: 0.7 })
+    const result = context.recall.recall({
+      projectId: "alpha",
+      query: "bun prefer",
+      recentTopics: [],
+      currentFiles: [],
+      now: new Date(),
+      tokenBudget: 50,
+    })
+    expect(result.items[0]?.content).toBe("For this project, use bun")
+  } finally {
+    await context.fixture.close()
+  }
+})

@@ -76,7 +76,9 @@ export class RecallEngine {
     const task = this.tasks.getActive(input.projectId)
     const budget = input.tokenBudget ?? 2_000
 
-    for (const candidate of candidates.sort((left, right) => right.score - left.score)) {
+    for (const candidate of candidates.sort(
+      (left, right) => priority(right) - priority(left) || right.score - left.score,
+    )) {
       if (seen.has(candidate.memory.id) || groupCounts[candidate.group] >= limits[candidate.group]) continue
       const nextItems = [...selected, candidate].map(({ memory }) => toRecallItem(memory))
       if (estimateRecallTokens(nextItems) > budget) continue
@@ -100,6 +102,12 @@ export class RecallEngine {
     if (ids.length === 0) return
     this.memories.markRecalled(ids, new Date().toISOString())
   }
+}
+
+function priority(candidate: ScoredMemory): number {
+  if (candidate.group === "projectCore") return 3
+  if (candidate.group === "dynamic" && candidate.memory.scope === "project") return 2
+  return 1
 }
 
 function buildFtsQuery(input: RecallInput): string | undefined {
