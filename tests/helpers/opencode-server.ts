@@ -106,7 +106,14 @@ async function requireWithin<T>(promise: Promise<T>, timeoutMs: number, timeoutM
 async function defaultTaskkill(args: string[]): Promise<void> {
   const taskkill = Bun.spawn(["taskkill", ...args], { stderr: "pipe", stdout: "ignore" })
   const [exitCode, stderr] = await Promise.all([taskkill.exited, new Response(taskkill.stderr).text()])
-  if (exitCode !== 0) throw new Error(stderr.trim() || `taskkill exited with code ${exitCode}`)
+  if (exitCode !== 0) {
+    throw Object.assign(new Error(stderr.trim() || `taskkill exited with code ${exitCode}`), { exitCode })
+  }
+}
+
+function taskkillExitCode(error: unknown): number | undefined {
+  if (!error || typeof error !== "object" || !("exitCode" in error)) return undefined
+  return typeof error.exitCode === "number" ? error.exitCode : undefined
 }
 
 export async function terminateProcess(child: ProcessHandle, options: TerminateOptions = {}): Promise<void> {
@@ -129,9 +136,8 @@ export async function terminateProcess(child: ProcessHandle, options: TerminateO
         `taskkill timed out after ${timeoutMs}ms`,
       )
     } catch (error) {
-      if (!/not found|no running instance|not exist/i.test(errorText(error))) {
-        throw new Error(`taskkill failed: ${errorText(error)}`)
-      }
+      if (taskkillExitCode(error) === 128) return
+      throw new Error(`taskkill failed: ${errorText(error)}`)
     }
     if (await settleWithin(child.exited, timeoutMs)) return
     throw new Error(`OpenCode process ${child.pid} did not exit after taskkill`)

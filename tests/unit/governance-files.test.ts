@@ -163,6 +163,9 @@ test("GitHub settings checklist names all required protections", async () => {
     "e2e (ubuntu-latest)",
     "e2e (windows-latest)",
     "pr-title",
+    "codeql",
+    "gitleaks",
+    "dependency-review",
   ]) {
     expect(settings).toContain(item)
   }

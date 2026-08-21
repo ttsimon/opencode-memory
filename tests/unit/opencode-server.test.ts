@@ -99,12 +99,29 @@ test("terminateProcess always cleans the Windows process tree after direct child
     platform: "win32",
     runTaskkill: async (args) => {
       taskkillCalls.push(args)
-      throw new Error("process not found")
+      throw Object.assign(new Error("process not found"), { exitCode: 128 })
     },
     timeoutMs: 10,
   })
 
   expect(taskkillCalls).toEqual([["/PID", "987", "/T", "/F"]])
+})
+
+test("terminateProcess accepts localized taskkill failure after the child has exited", async () => {
+  const child = {
+    exited: Promise.resolve(0),
+    exitCode: 0,
+    kill() {},
+    pid: 988,
+  }
+
+  await terminateProcess(child, {
+    platform: "win32",
+    runTaskkill: async () => {
+      throw Object.assign(new Error("没有运行的任务"), { exitCode: 128 })
+    },
+    timeoutMs: 10,
+  })
 })
 
 test("terminateProcess reports non-missing Windows process-tree cleanup failures", async () => {

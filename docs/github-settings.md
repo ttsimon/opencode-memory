@@ -39,6 +39,9 @@ The initial repository has one maintainer. A solo maintainer cannot approve thei
 - [ ] `e2e (ubuntu-latest)`
 - [ ] `e2e (windows-latest)`
 - [ ] `pr-title`
+- [ ] `codeql`
+- [ ] `gitleaks`
+- [ ] `dependency-review`
 
 Use the exact names reported by the governance pull request. Do not configure guessed names before the first run completes.
 
@@ -48,5 +51,6 @@ Use the exact names reported by the governance pull request. Do not configure gu
 - [ ] Trusted publishing points to repository `ttsimon/opencode-memory` and workflow `.github/workflows/release.yml`.
 - [ ] npm provenance is enabled.
 - [ ] No long-lived `NPM_TOKEN` repository secret exists.
+- [ ] Repository variable `NPM_PUBLISH_ENABLED` remains unset until the first release is explicitly approved, then is set to `true`.
 
 If npm requires the package to exist before Trusted publishing can be configured, leave this item open and create the issue `Configure npm trusted publishing before first release`.

@@ -37,6 +37,7 @@ test("security and release workflows use pinned actions and scoped permissions",
   expect(release).toContain("pull-requests: write")
   expect(release).toContain("publish-script: bun run release")
   expect(release).toContain("version-script: bun run version-packages")
+  expect(release).toContain("if: vars.NPM_PUBLISH_ENABLED == 'true'")
   expect(release).not.toContain("NPM_TOKEN")
 
   expect(renovate.extends).toContain("config:recommended")
