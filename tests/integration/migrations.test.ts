@@ -36,7 +36,7 @@ test("migration failure rolls back and keeps a restorable backup", async () => {
     expect(backups).toHaveLength(1)
     const backupPath = join(fixture.paths.backups, backups[0] ?? "missing")
     expect((await stat(backupPath)).size).toBeGreaterThan(0)
-    const backup = new Database(backupPath, { readonly: true, strict: true })
+    const backup = new Database(backupPath, { readonly: true })
     try {
       expect(backup.query("PRAGMA integrity_check").get()).toEqual({ integrity_check: "ok" })
       expect(backup.query("PRAGMA user_version").get()).toEqual({ user_version: 1 })
