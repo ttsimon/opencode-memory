@@ -61,6 +61,20 @@ export class AuditRepository {
     })
   }
 
+  superseded(memory: MemoryRecord): void {
+    this.insert({
+      entityType: "memory",
+      entityId: memory.id,
+      operation: "supersede",
+      sourceSessionId: memory.sourceSessionId,
+      sourceMessageId: memory.sourceMessageId,
+      fromStatus: "active",
+      toStatus: "superseded",
+      summary: `Superseded ${memory.scope} ${memory.kind}`,
+      reasons: [],
+    })
+  }
+
   rejected(
     operation: string,
     reasons: readonly SensitiveReason[],

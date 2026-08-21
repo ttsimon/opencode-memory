@@ -76,6 +76,34 @@ export class MemoryRepository {
     return record
   }
 
+  findConflict(candidate: MemoryCandidate): MemoryRecord | undefined {
+    if (!candidate.conflictKey) return undefined
+    const row = this.database.raw
+      .query<MemoryRow, [string, string | null, string]>(`
+        SELECT * FROM memories WHERE scope = ? AND project_id IS ? AND conflict_key = ? AND status = 'active' LIMIT 1
+      `)
+      .get(candidate.scope, candidate.projectId, candidate.conflictKey)
+    return row ? mapMemory(row) : undefined
+  }
+
+  supersede(oldId: string, candidate: MemoryCandidate): MemoryRecord {
+    const now = new Date().toISOString()
+    this.database.raw.query("UPDATE memories SET status = 'superseded', updated_at = ? WHERE id = ?").run(now, oldId)
+    const created = this.insert(candidate)
+    this.database.raw.query("UPDATE memories SET supersedes_id = ? WHERE id = ?").run(oldId, created.id)
+    return this.get(created.id) ?? created
+  }
+
+  listProjectable(projectId: string): MemoryRecord[] {
+    return this.database.raw
+      .query<MemoryRow, [string]>(`
+        SELECT * FROM memories WHERE project_id = ? AND status = 'active' AND importance >= 0.7
+        ORDER BY kind, importance DESC, updated_at DESC
+      `)
+      .all(projectId)
+      .map(mapMemory)
+  }
+
   findDuplicate(candidate: MemoryCandidate): MemoryRecord | undefined {
     if (candidate.sourceSessionId && candidate.sourceMessageId) {
       const bySource = this.database.raw

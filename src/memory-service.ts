@@ -34,6 +34,13 @@ export class MemoryService {
         this.audit.updated(memory)
         return { outcome: "updated", memory } as const
       }
+      const conflict = this.memories.findConflict(candidate)
+      if (conflict) {
+        this.audit.superseded({ ...conflict, status: "superseded" })
+        const memory = this.memories.supersede(conflict.id, candidate)
+        this.audit.created(memory)
+        return { outcome: "created", memory } as const
+      }
       const memory = this.memories.insert(candidate)
       this.audit.created(memory)
       return { outcome: "created", memory } as const
