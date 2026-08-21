@@ -57,6 +57,7 @@ interface RemoveTemporaryRootOptions {
 
 export interface RunningOpenCode {
   baseUrl: string
+  dataDir: string
   projectDir: string
   stderr(): string
   stop(): Promise<void>
@@ -442,6 +443,7 @@ export async function startIsolatedOpenCodeServer(input: StartOpenCodeInput): Pr
 
     return {
       baseUrl: started.baseUrl,
+      dataDir,
       projectDir,
       stderr: () => redactOutput(started.rawStderr(), temporaryRoot),
       stop,
