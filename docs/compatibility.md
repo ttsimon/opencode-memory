@@ -7,7 +7,7 @@
 | OpenCode | OpenCode 1.18.18 | Exact version used for plugin API and integration validation |
 | Bun | Bun 1.3.14 | Exact version used for development, tests, builds, and package checks |
 
-The package currently provides only the plugin health skeleton. Compatibility for unreleased memory storage, recall, lifecycle, and command features is not yet claimed.
+The current development branch validates the manual-memory MVP and automatic-memory lifecycle against OpenCode 1.18.18.
 
 ## Version policy
 

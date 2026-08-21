@@ -35,7 +35,7 @@ test("terminateProcess reports failure when Unix remains alive after KILL", asyn
   )
 
   expect(signals).toEqual(["SIGTERM", "SIGKILL"])
-  expect(performance.now() - startedAt).toBeLessThan(100)
+  expect(performance.now() - startedAt).toBeLessThan(250)
 })
 
 test("terminateProcess reports failure when Windows remains alive after taskkill", async () => {

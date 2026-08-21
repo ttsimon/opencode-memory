@@ -1,0 +1,85 @@
+import type { MemoryCandidate, MemoryRecord } from "./domain/types"
+import { inspectSensitive, type SensitiveReason } from "./security/filter"
+import type { AuditRepository } from "./storage/audit-repository"
+import type { MemoryDatabase } from "./storage/database"
+import type { MemoryRepository } from "./storage/memory-repository"
+
+export type RememberResult =
+  | { readonly outcome: "created" | "updated"; readonly memory: MemoryRecord }
+  | { readonly outcome: "rejected"; readonly reasons: readonly SensitiveReason[] }
+
+export type ForgetResult =
+  | { readonly outcome: "deleted"; readonly id: string }
+  | { readonly outcome: "ambiguous"; readonly ids: readonly string[] }
+  | { readonly outcome: "not_found" }
+
+export class MemoryService {
+  constructor(
+    private readonly database: MemoryDatabase,
+    private readonly memories: MemoryRepository,
+    private readonly audit: AuditRepository,
+  ) {}
+
+  remember(candidate: MemoryCandidate): RememberResult {
+    const safety = inspectSensitive(candidate.content)
+    if (!safety.safe) {
+      this.audit.rejected("remember", safety.reasons, candidate.sourceSessionId, candidate.sourceMessageId)
+      return { outcome: "rejected", reasons: safety.reasons }
+    }
+
+    return this.database.raw.transaction(() => {
+      const duplicate = this.memories.findDuplicate(candidate)
+      if (duplicate) {
+        const memory = this.memories.touch(duplicate, candidate)
+        this.audit.updated(memory)
+        return { outcome: "updated", memory } as const
+      }
+      const conflict = this.memories.findConflict(candidate)
+      if (conflict) {
+        this.audit.superseded({ ...conflict, status: "superseded" })
+        const memory = this.memories.supersede(conflict.id, candidate)
+        this.audit.created(memory)
+        return { outcome: "created", memory } as const
+      }
+      const memory = this.memories.insert(candidate)
+      this.audit.created(memory)
+      return { outcome: "created", memory } as const
+    })()
+  }
+
+  search(query: string, projectId?: string): MemoryRecord[] {
+    return this.memories.search(query, projectId)
+  }
+
+  get(id: string, projectId?: string): MemoryRecord | undefined {
+    const memory = this.memories.get(id)
+    if (!memory) return undefined
+    if (projectId && memory.scope === "project" && memory.projectId !== projectId) return undefined
+    return memory
+  }
+
+  forget(selector: { readonly id?: string; readonly query?: string; readonly projectId: string }): ForgetResult {
+    let id = selector.id
+    if (!id && selector.query) {
+      const matches = this.memories.search(selector.query, selector.projectId)
+      if (matches.length === 0) return { outcome: "not_found" }
+      if (matches.length > 1) return { outcome: "ambiguous", ids: matches.map((memory) => memory.id) }
+      id = matches[0]?.id
+    }
+    if (!id) return { outcome: "not_found" }
+
+    return this.database.raw.transaction(() => {
+      const current = this.get(id, selector.projectId)
+      if (!current || current.status === "deleted") return { outcome: "not_found" } as const
+      const deleted = this.memories.softDelete(id)
+      if (!deleted) return { outcome: "not_found" } as const
+      this.audit.deleted(deleted)
+      return { outcome: "deleted", id } as const
+    })()
+  }
+
+  history(id?: string, projectId?: string) {
+    if (id && !this.get(id, projectId)) return []
+    return projectId ? this.audit.listForProject(projectId, id) : this.audit.list(id)
+  }
+}
