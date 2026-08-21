@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite"
-import { copyFile, readdir, stat, unlink } from "node:fs/promises"
+import { chmod, copyFile, readdir, stat, unlink } from "node:fs/promises"
 import { join } from "node:path"
 import type { DataPaths } from "../domain/types"
 import { ensureDataPaths } from "../paths"
@@ -34,6 +34,7 @@ export async function openDatabase(paths: DataPaths, options: OpenDatabaseOption
     if (existingVersion === 0) await copyBackupFile(paths, 0)
   }
   const database = new Database(paths.database, { create: true, strict: true })
+  if (process.platform !== "win32") await chmod(paths.database, 0o600)
   database.exec("PRAGMA foreign_keys = ON")
   database.exec("PRAGMA journal_mode = WAL")
   database.exec(`
@@ -114,9 +115,17 @@ async function createMigrationBackup(database: Database, paths: DataPaths, versi
 async function copyBackupFile(paths: DataPaths, version: number): Promise<void> {
   const timestamp = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`
   await copyFile(paths.database, join(paths.backups, `memory-v${version}-${timestamp}.db`))
-  const backups = (await readdir(paths.backups))
-    .filter((file) => /^memory-v\d+-\d+-[a-f0-9-]+\.db$/i.test(file))
-    .sort()
-    .reverse()
+  if (process.platform !== "win32") await chmod(join(paths.backups, `memory-v${version}-${timestamp}.db`), 0o600)
+  const backups = sortBackupFilesNewestFirst(
+    (await readdir(paths.backups)).filter((file) => /^memory-v\d+-\d+-[a-f0-9-]+\.db$/i.test(file)),
+  )
   await Promise.all(backups.slice(3).map((file) => unlink(join(paths.backups, file))))
+}
+
+export function sortBackupFilesNewestFirst(files: readonly string[]): string[] {
+  return [...files].sort((left, right) => backupTimestamp(right) - backupTimestamp(left))
+}
+
+function backupTimestamp(file: string): number {
+  return Number(file.match(/^memory-v\d+-(\d+)-/)?.[1] ?? 0)
 }

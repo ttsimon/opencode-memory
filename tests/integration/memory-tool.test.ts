@@ -77,12 +77,14 @@ test("degraded memory tool keeps health and reports unavailable storage", async 
     state: new SessionState(),
     runtime: createRuntime(fake.client, "C:/project"),
     directory: "C:/project",
-    degradedReason: "database locked",
+    degradedReason: "password=hunter2",
     dispose() {},
   }
   const tool = createMemoryTool(services)
   expect(await tool.execute({ action: "health" }, context)).toBe("OpenCode Memory is loaded.")
-  expect(await tool.execute({ action: "status" }, context)).toBe("OpenCode Memory is degraded: database locked")
+  const result = String(await tool.execute({ action: "status" }, context))
+  expect(result).not.toContain("hunter2")
+  expect(result).toContain("[REDACTED:password]")
 })
 
 test("memory tool catches runtime database failures", async () => {

@@ -30,7 +30,7 @@ export function createMemoryTool(services: PluginServices) {
       if (arguments_.action === "health") return "OpenCode Memory is loaded."
       try {
         if (!services.memory || !services.database || !services.memories || !services.project) {
-          return `OpenCode Memory is degraded: ${services.degradedReason ?? "storage unavailable"}`
+          return `OpenCode Memory is degraded: ${redactDiagnostic(services.degradedReason ?? "storage unavailable")}`
         }
         const projectId = services.project.projectId
         switch (arguments_.action) {

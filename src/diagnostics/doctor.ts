@@ -1,6 +1,7 @@
 import { stat } from "node:fs/promises"
 import { join } from "node:path"
 import type { DataPaths, ProjectScope } from "../domain/types"
+import { escapeMarkdown } from "../projection/markdown"
 import type { MemoryDatabase } from "../storage/database"
 
 export interface DoctorCheck {
@@ -98,9 +99,9 @@ async function projectionCheck(database: MemoryDatabase, projectId: string, path
     )
     .all(projectId)
   const activeMissing = rows.some(
-    (row) => row.status === "active" && row.importance >= 0.7 && !text.includes(row.content),
+    (row) => row.status === "active" && row.importance >= 0.7 && !text.includes(escapeMarkdown(row.content)),
   )
-  const inactivePresent = rows.some((row) => row.status !== "active" && text.includes(row.content))
+  const inactivePresent = rows.some((row) => row.status !== "active" && text.includes(escapeMarkdown(row.content)))
   return text.includes("Generated from SQLite") && !activeMissing && !inactivePresent
     ? { name: "projection", status: "ok", message: "Projection marker is present." }
     : { name: "projection", status: "warning", message: "Projection should be rebuilt." }

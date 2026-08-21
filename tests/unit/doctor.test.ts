@@ -101,3 +101,32 @@ test("doctor reports inaccessible permissions and projection drift", async () =>
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test("doctor accepts projected Markdown escaping", async () => {
+  const root = await mkdtemp(join(tmpdir(), "opencode-memory-doctor-escaping-"))
+  const paths = resolveDataPaths({ XDG_DATA_HOME: root, HOME: root }, "linux")
+  const database = await openDatabase(paths)
+  const projectId = "d".repeat(32)
+  try {
+    database.raw
+      .query(
+        `INSERT INTO memories (id, scope, project_id, kind, content, normalized_content, status, confidence, importance, created_at, updated_at) VALUES (?, 'project', ?, 'fact', 'Use *bold* [link]', 'use bold link', 'active', 1, 0.9, 'now', 'now')`,
+      )
+      .run("m1", projectId)
+    await mkdir(`${paths.projects}/${projectId}`, { recursive: true })
+    await Bun.write(
+      `${paths.projects}/${projectId}/MEMORY.md`,
+      "Generated from SQLite\n- [fact] Use \\*bold\\* \\[link\\]\n",
+    )
+    const report = await new MemoryDoctor(database, paths).run({
+      projectId,
+      root,
+      identity: `path:${root}`,
+      kind: "path",
+    })
+    expect(report.checks.find((check) => check.name === "projection")?.status).toBe("ok")
+  } finally {
+    database.close()
+    await rm(root, { recursive: true, force: true })
+  }
+})

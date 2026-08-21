@@ -12,6 +12,10 @@ export async function finalizeSession(services: PluginServices, sessionId: strin
   if (!services.database || !services.project || !services.taskService || !services.messages) return
   let pendingKey = `idle:${sessionId}:unknown`
   try {
+    const unknownFailure = services.database.raw
+      .query<{ attempts: number }, [string]>("SELECT attempts FROM pending_events WHERE event_key = ?")
+      .get(pendingKey)
+    if (unknownFailure && unknownFailure.attempts >= 3) return
     const messages = (await services.messages(sessionId)).slice(-100)
     const lastAssistant = [...messages].reverse().find((message) => message.info.role === "assistant")
     const eventKey = `${sessionId}:idle:${lastAssistant?.info.id ?? "none"}`

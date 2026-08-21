@@ -1,4 +1,4 @@
-import { mkdir, readdir, rename, rm } from "node:fs/promises"
+import { chmod, mkdir, readdir, rename, rm } from "node:fs/promises"
 import { join } from "node:path"
 import type { DataPaths, MemoryKind } from "../domain/types"
 import { inspectSensitive } from "../security/filter"
@@ -55,12 +55,13 @@ function renderTopic(kind: MemoryKind, contents: readonly string[]): string {
   return `# ${kind}\n\nGenerated from SQLite.\n\n${contents.map((content) => `- ${escapeMarkdown(content)}`).join("\n")}\n`
 }
 
-function escapeMarkdown(content: string): string {
+export function escapeMarkdown(content: string): string {
   return content.replace(/[\\`*_{}[\]<>#|]/g, "\\$&").replace(/\r?\n/g, " ")
 }
 
 async function atomicWrite(target: string, content: string): Promise<void> {
   const temporary = `${target}.tmp-${process.pid}-${crypto.randomUUID()}`
   await Bun.write(temporary, content)
+  if (process.platform !== "win32") await chmod(temporary, 0o600)
   await rename(temporary, target)
 }

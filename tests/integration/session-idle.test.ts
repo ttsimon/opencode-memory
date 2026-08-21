@@ -106,7 +106,9 @@ test("session.idle fetches messages and updates the active task", async () => {
 })
 
 test("failed finalization stores only sanitized retry metadata and stops after three attempts", async () => {
+  let calls = 0
   const context = await setup(async () => {
+    calls += 1
     throw new Error("password=hunter2")
   })
   try {
@@ -119,6 +121,7 @@ test("failed finalization stores only sanitized retry metadata and stops after t
     expect(rows).toEqual([{ metadata_json: expect.any(String), attempts: 3 }])
     expect(rows[0]?.metadata_json).not.toContain("hunter2")
     expect(context.fixture.database.raw.serialize().toString("utf8")).not.toContain("hunter2")
+    expect(calls).toBe(3)
   } finally {
     await context.fixture.close()
   }

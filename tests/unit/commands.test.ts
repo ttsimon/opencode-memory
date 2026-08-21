@@ -16,6 +16,12 @@ test("automatic phase adds history and doctor commands", () => {
   expect(Object.keys(config.command ?? {})).toEqual(expect.arrayContaining(["memory-history", "memory-doctor"]))
 })
 
+test("history without arguments omits the optional id", () => {
+  const config: Config = {}
+  registerCommands(config, true)
+  expect(config.command?.["memory-history"]?.template).not.toContain('id ""')
+})
+
 test("routes command execution to one fixed memory tool action", () => {
   const parts: Part[] = [{ type: "text", text: "original", id: "p1", messageID: "m1", sessionID: "s1" }]
   routeMemoryCommand({ command: "memory-search", arguments: "sqlite" }, { parts })

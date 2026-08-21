@@ -1,7 +1,7 @@
 import { Database } from "bun:sqlite"
 import { expect, test } from "bun:test"
 import { readdir, rm } from "node:fs/promises"
-import { type Migration, openDatabase } from "../../src/storage/database"
+import { type Migration, openDatabase, sortBackupFilesNewestFirst } from "../../src/storage/database"
 import { createDatabaseFixture } from "../helpers/database"
 
 const versionOne: Migration = {
@@ -85,4 +85,12 @@ test("backs up an existing version-zero database before framework metadata is ad
   } finally {
     await fixture.close()
   }
+})
+
+test("sorts migration backups by timestamp instead of version text", () => {
+  expect(sortBackupFilesNewestFirst(["memory-v9-200-a.db", "memory-v10-300-b.db", "memory-v11-100-c.db"])).toEqual([
+    "memory-v10-300-b.db",
+    "memory-v9-200-a.db",
+    "memory-v11-100-c.db",
+  ])
 })
