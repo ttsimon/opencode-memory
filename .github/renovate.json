@@ -1,0 +1,37 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "schedule": ["before 6am on monday"],
+  "rangeStrategy": "pin",
+  "pinDigests": true,
+  "automerge": false,
+  "packageRules": [
+    {
+      "description": "Group non-major development dependencies",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "development dependencies"
+    },
+    {
+      "description": "Group OpenCode compatibility packages",
+      "matchPackageNames": ["@opencode-ai/plugin", "@opencode-ai/sdk", "opencode-ai"],
+      "groupName": "OpenCode compatibility"
+    },
+    {
+      "description": "Keep TypeScript updates separate",
+      "matchPackageNames": ["typescript"],
+      "groupName": "TypeScript"
+    },
+    {
+      "description": "Keep Bun updates separate",
+      "matchManagers": ["mise"],
+      "matchPackageNames": ["bun"],
+      "groupName": "Bun"
+    },
+    {
+      "description": "Separate major updates",
+      "matchUpdateTypes": ["major"],
+      "separateMajorMinor": true
+    }
+  ]
+}

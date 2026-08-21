@@ -3,6 +3,7 @@ import {
   assertOpenCodeVersion,
   createTemporaryRootCleanup,
   redactOutput,
+  removeTemporaryRoot,
   runWithPortRetries,
   stopServerResources,
   terminateProcess,
@@ -195,6 +196,20 @@ test("temporary root cleanup can retry after a bounded removal times out", async
   await cleanup.remove({}, 10)
 
   expect(attempts).toBe(2)
+})
+
+test("temporary root removal retries transient Windows filesystem locks", async () => {
+  let attempts = 0
+
+  await removeTemporaryRoot("C:\\temp\\run", {
+    remove: async () => {
+      attempts += 1
+      if (attempts < 3) throw Object.assign(new Error("busy"), { code: "EBUSY" })
+    },
+    sleep: async () => {},
+  })
+
+  expect(attempts).toBe(3)
 })
 
 test("temporary root cleanup appends a redacted cleanup failure to startup errors", async () => {

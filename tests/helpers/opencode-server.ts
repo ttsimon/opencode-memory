@@ -49,6 +49,12 @@ interface StopServerResourcesInput {
   terminate?: (child: ProcessHandle, options: TerminateOptions) => Promise<void>
 }
 
+interface RemoveTemporaryRootOptions {
+  attempts?: number
+  remove?: (path: string) => Promise<void>
+  sleep?: (milliseconds: number) => Promise<void>
+}
+
 export interface RunningOpenCode {
   baseUrl: string
   projectDir: string
@@ -272,6 +278,27 @@ export function createTemporaryRootCleanup(temporaryRoot: string, remove: () => 
   }
 }
 
+export async function removeTemporaryRoot(
+  temporaryRoot: string,
+  options: RemoveTemporaryRootOptions = {},
+): Promise<void> {
+  const attempts = options.attempts ?? 6
+  const remove = options.remove ?? ((path: string) => rm(path, { force: true, recursive: true }))
+  const sleep = options.sleep ?? Bun.sleep
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await remove(temporaryRoot)
+      return
+    } catch (error) {
+      const code = error && typeof error === "object" && "code" in error ? String(error.code) : ""
+      const transient = ["EACCES", "EBUSY", "ENOTEMPTY", "EPERM"].includes(code)
+      if (!transient || attempt === attempts) throw error
+      await sleep(attempt * 100)
+    }
+  }
+}
+
 export async function stopServerResources(input: StopServerResourcesInput): Promise<void> {
   const environment = input.environment ?? process.env
   const processTimeoutMs = input.processTimeoutMs ?? stopTimeoutMs
@@ -316,7 +343,7 @@ export async function startIsolatedOpenCodeServer(input: StartOpenCodeInput): Pr
   await assertOpenCodeVersion()
 
   const temporaryRoot = await mkdtemp(join(tmpdir(), "opencode-memory-e2e-"))
-  const cleanup = createTemporaryRootCleanup(temporaryRoot, () => rm(temporaryRoot, { force: true, recursive: true }))
+  const cleanup = createTemporaryRootCleanup(temporaryRoot, () => removeTemporaryRoot(temporaryRoot))
   const deadline = Date.now() + startupTimeoutMs
   let diagnosticStderr = ""
 
