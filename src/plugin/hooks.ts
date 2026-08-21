@@ -1,7 +1,8 @@
 import type { Config, Hooks, PluginInput } from "@opencode-ai/plugin"
-import type { Part } from "@opencode-ai/sdk"
+import type { Part, Todo } from "@opencode-ai/sdk"
 import type { ProjectScope } from "../domain/types"
 import { extractImmediateCandidates } from "../lifecycle/extraction"
+import { finalizeSession, type SessionMessage, updateTodos } from "../lifecycle/finalization"
 import { MemoryService } from "../memory-service"
 import { resolveDataPaths } from "../paths"
 import { resolveProject } from "../project/resolver"
@@ -11,6 +12,7 @@ import { AuditRepository } from "../storage/audit-repository"
 import { type MemoryDatabase, openDatabase } from "../storage/database"
 import { MemoryRepository } from "../storage/memory-repository"
 import { TaskRepository } from "../storage/task-repository"
+import { TaskService } from "../task-service"
 import { registerCommands, routeMemoryCommand } from "./commands"
 import type { PluginRuntime } from "./runtime"
 import { SessionState } from "./session-state"
@@ -21,12 +23,14 @@ export interface PluginServices {
   readonly memory?: MemoryService
   readonly memories?: MemoryRepository
   readonly tasks?: TaskRepository
+  readonly taskService?: TaskService
   readonly recall?: RecallEngine
   readonly state: SessionState
   readonly runtime: PluginRuntime
   readonly project?: ProjectScope
   readonly directory: string
   readonly degradedReason?: string
+  readonly messages?: (sessionId: string) => Promise<readonly SessionMessage[]>
   dispose(): void
 }
 
@@ -41,16 +45,26 @@ export async function createServices(
     const project = await resolveProject({ directory: input.directory, worktree: input.worktree })
     const memories = new MemoryRepository(database)
     const tasks = new TaskRepository(database)
+    const audit = new AuditRepository(database)
     return {
       database,
-      memory: new MemoryService(database, memories, new AuditRepository(database)),
+      memory: new MemoryService(database, memories, audit),
       memories,
       tasks,
+      taskService: new TaskService(database, tasks, audit),
       recall: new RecallEngine(memories, tasks),
       state: new SessionState(),
       runtime,
       project,
       directory: input.directory,
+      messages: async (sessionId) => {
+        const response = await input.client.session.messages({
+          path: { id: sessionId },
+          query: { directory: input.directory, limit: 100 },
+        })
+        if (response.error) throw new Error(`Failed to load session messages: ${JSON.stringify(response.error)}`)
+        return response.data ?? []
+      },
       dispose: () => database.close(),
     }
   } catch (error) {
@@ -131,7 +145,16 @@ export function createHooks(services: PluginServices): Hooks {
       async (input: { command: string; arguments: string }, output: { parts: Part[] }) =>
         routeMemoryCommand(input, output),
     ),
-    event: async () => {},
+    event: services.runtime.guardHook("event", async ({ event }) => {
+      if (event.type === "todo.updated") {
+        const properties = event.properties as { sessionID: string; todos: Todo[] }
+        updateTodos(services, properties.sessionID, properties.todos)
+      }
+      if (event.type === "session.idle") {
+        const properties = event.properties as { sessionID: string }
+        await finalizeSession(services, properties.sessionID)
+      }
+    }),
     tool: { memory: createMemoryTool(services) },
     dispose: async () => services.dispose(),
   }
