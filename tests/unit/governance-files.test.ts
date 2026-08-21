@@ -146,3 +146,28 @@ test("publishing metadata and ADRs are complete", async () => {
   expect(commandRouting).toContain("cannot short-circuit command execution")
   expect(commandRouting).toContain("cannot directly return database results")
 })
+
+test("GitHub settings checklist names all required protections", async () => {
+  const settings = await readFile("docs/github-settings.md", "utf8")
+
+  for (const item of [
+    "Secret scanning",
+    "Push protection",
+    "Private vulnerability reporting",
+    "Required status checks",
+    "Trusted publishing",
+    "quality",
+    "test (ubuntu-latest)",
+    "test (windows-latest)",
+    "test (macos-latest)",
+    "e2e (ubuntu-latest)",
+    "e2e (windows-latest)",
+    "pr-title",
+  ]) {
+    expect(settings).toContain(item)
+  }
+
+  expect(settings).toContain("required approving reviews: 0")
+  expect(settings).toContain("Renovate")
+  expect(settings).toContain(".github/workflows/release.yml")
+})
