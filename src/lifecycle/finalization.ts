@@ -1,5 +1,6 @@
 import type { Message, Part, Todo } from "@opencode-ai/sdk"
 import type { PluginServices } from "../plugin/hooks"
+import { inspectSensitive } from "../security/filter"
 import { redactDiagnostic } from "../security/redaction"
 
 export interface SessionMessage {
@@ -9,44 +10,51 @@ export interface SessionMessage {
 
 export async function finalizeSession(services: PluginServices, sessionId: string): Promise<void> {
   if (!services.database || !services.project || !services.taskService || !services.messages) return
-  const existing = services.database.raw
-    .query<{ attempts: number }, [string]>("SELECT attempts FROM pending_events WHERE event_key = ?")
-    .get(`idle:${sessionId}`)
-  if (existing && existing.attempts >= 3) return
-
+  let pendingKey = `idle:${sessionId}:unknown`
   try {
     const messages = (await services.messages(sessionId)).slice(-100)
     const lastAssistant = [...messages].reverse().find((message) => message.info.role === "assistant")
     const eventKey = `${sessionId}:idle:${lastAssistant?.info.id ?? "none"}`
+    pendingKey = `idle:${eventKey}`
+    const existing = services.database.raw
+      .query<{ attempts: number }, [string]>("SELECT attempts FROM pending_events WHERE event_key = ?")
+      .get(pendingKey)
+    if (existing && existing.attempts >= 3) return
     if (isProcessed(services, eventKey)) return
 
     const state = services.state.get(sessionId)
-    const goal = firstUserText(messages) ?? "Continue the current project task"
-    const completed = state.todos.filter((todo) => todo.status === "completed").map((todo) => todo.content)
+    const goal = safeText(firstUserText(messages)) ?? "Continue the current project task"
+    const safeTodos = state.todos.filter((todo) => inspectSensitive(todo.content).safe)
+    const completed = safeTodos.filter((todo) => todo.status === "completed").map((todo) => todo.content)
     const inProgress = state.todos
+      .filter((todo) => inspectSensitive(todo.content).safe)
       .filter((todo) => todo.status !== "completed" && todo.status !== "cancelled")
       .map((todo) => todo.content)
     const assistantText = lastAssistant ? textContent(lastAssistant.parts) : ""
     const nextSteps = inProgress.length > 0 ? inProgress : extractNextSteps(assistantText)
-
-    services.taskService.replace({
-      projectId: services.project.projectId,
-      goal,
-      status: "active",
-      completed,
-      inProgress,
-      files: state.currentFiles,
-      decisions: extractDecisions(assistantText),
-      blockers: extractBlockers(assistantText),
-      nextSteps,
-      sourceSessionId: sessionId,
-    })
-    services.database.raw
-      .query("INSERT INTO processed_events (event_key, processed_at) VALUES (?, ?)")
-      .run(eventKey, new Date().toISOString())
-    services.database.raw.query("DELETE FROM pending_events WHERE event_key = ?").run(`idle:${sessionId}`)
+    services.database.raw.transaction(() => {
+      const allCompleted = safeTodos.length > 0 && safeTodos.every((todo) => todo.status === "completed")
+      if (allCompleted) services.taskService?.archive(services.project?.projectId ?? "", "completed")
+      else
+        services.taskService?.replace({
+          projectId: services.project?.projectId ?? "",
+          goal,
+          status: "active",
+          completed,
+          inProgress,
+          files: state.currentFiles.filter((file) => inspectSensitive(file).safe),
+          decisions: extractDecisions(assistantText).filter((item) => inspectSensitive(item).safe),
+          blockers: extractBlockers(assistantText).filter((item) => inspectSensitive(item).safe),
+          nextSteps: nextSteps.filter((item) => inspectSensitive(item).safe),
+          sourceSessionId: sessionId,
+        })
+      services.database?.raw
+        .query("INSERT INTO processed_events (event_key, processed_at) VALUES (?, ?)")
+        .run(eventKey, new Date().toISOString())
+      services.database?.raw.query("DELETE FROM pending_events WHERE event_key = ?").run(pendingKey)
+    })()
   } catch (error) {
-    recordPendingFailure(services, sessionId, error)
+    recordPendingFailure(services, sessionId, pendingKey, error)
   }
 }
 
@@ -54,7 +62,7 @@ export function updateTodos(services: PluginServices, sessionId: string, todos: 
   services.state.setTodos(sessionId, todos)
 }
 
-function recordPendingFailure(services: PluginServices, sessionId: string, error: unknown): void {
+function recordPendingFailure(services: PluginServices, sessionId: string, eventKey: string, error: unknown): void {
   const now = new Date().toISOString()
   const message = redactDiagnostic(error instanceof Error ? error.message : String(error))
   const metadata = JSON.stringify({ sessionId, error: message.slice(0, 200) })
@@ -67,7 +75,7 @@ function recordPendingFailure(services: PluginServices, sessionId: string, error
         attempts = MIN(pending_events.attempts + 1, 3),
         updated_at = excluded.updated_at
     `)
-    .run(`idle:${sessionId}`, metadata, now, now)
+    .run(eventKey, metadata, now, now)
 }
 
 function isProcessed(services: PluginServices, eventKey: string): boolean {
@@ -85,6 +93,10 @@ function firstUserText(messages: readonly SessionMessage[]): string | undefined 
     if (text) return text.split(/[.!?\n]/)[0]?.trim()
   }
   return undefined
+}
+
+function safeText(text: string | undefined): string | undefined {
+  return text && inspectSensitive(text).safe ? text : undefined
 }
 
 function textContent(parts: readonly Part[]): string {

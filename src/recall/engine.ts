@@ -79,7 +79,7 @@ export class RecallEngine {
     for (const candidate of candidates.sort((left, right) => right.score - left.score)) {
       if (seen.has(candidate.memory.id) || groupCounts[candidate.group] >= limits[candidate.group]) continue
       const nextItems = [...selected, candidate].map(({ memory }) => toRecallItem(memory))
-      if (estimateRecallTokens(nextItems, task) > budget) continue
+      if (estimateRecallTokens(nextItems) > budget) continue
       selected.push(candidate)
       seen.add(candidate.memory.id)
       groupCounts[candidate.group] += 1

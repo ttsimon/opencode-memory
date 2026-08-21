@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite"
 import { expect, test } from "bun:test"
-import { readdir } from "node:fs/promises"
+import { readdir, rm } from "node:fs/promises"
 import { type Migration, openDatabase } from "../../src/storage/database"
 import { createDatabaseFixture } from "../helpers/database"
 
@@ -60,6 +60,28 @@ test("retains only the newest three migration backups", async () => {
       await Bun.sleep(2)
     }
     expect((await readdir(fixture.paths.backups)).length).toBe(3)
+  } finally {
+    await fixture.close()
+  }
+})
+
+test("backs up an existing version-zero database before framework metadata is added", async () => {
+  const fixture = await createDatabaseFixture([versionOne])
+  fixture.database.close()
+  await rm(fixture.paths.database, { force: true })
+  await rm(`${fixture.paths.database}-wal`, { force: true })
+  await rm(`${fixture.paths.database}-shm`, { force: true })
+  const raw = new Database(fixture.paths.database, { create: true })
+  raw.exec("PRAGMA user_version = 0; CREATE TABLE legacy (value TEXT); INSERT INTO legacy VALUES ('keep')")
+  raw.close()
+  try {
+    const database = await openDatabase(fixture.paths, { migrations: [versionOne] })
+    database.close()
+    const backups = await readdir(fixture.paths.backups)
+    const backup = new Database(`${fixture.paths.backups}/${backups[0]}`, { readonly: true })
+    expect(backup.query("SELECT value FROM legacy").get()).toEqual({ value: "keep" })
+    expect(backup.query("SELECT name FROM sqlite_master WHERE name = 'schema_migrations'").get()).toBeNull()
+    backup.close()
   } finally {
     await fixture.close()
   }

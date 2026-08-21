@@ -41,6 +41,32 @@ test("rebuilds deterministic project Markdown from stable SQLite records", async
     await Bun.write(target, "corrupt")
     await projection.rebuildProject("p1")
     expect(await Bun.file(target).text()).toContain("Use bun:sqlite")
+    service.forget({ query: "bun:sqlite", projectId: "p1" })
+    await projection.rebuildProject("p1")
+    expect(await Bun.file(join(paths.projects, "p1", "topics", "decision.md")).exists()).toBe(false)
+  } finally {
+    database.close()
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test("rebuilds global Markdown projection", async () => {
+  const root = await mkdtemp(join(tmpdir(), "opencode-memory-global-projection-"))
+  const paths = resolveDataPaths({ XDG_DATA_HOME: root, HOME: root }, "linux")
+  const database = await openDatabase(paths)
+  const repository = new MemoryRepository(database)
+  const service = new MemoryService(database, repository, new AuditRepository(database))
+  try {
+    service.remember({
+      scope: "global",
+      projectId: null,
+      kind: "preference",
+      content: "Answer in Chinese",
+      confidence: 1,
+      importance: 0.9,
+    })
+    await new MarkdownProjection(paths, repository).rebuildGlobal()
+    expect(await Bun.file(paths.globalMemory).text()).toContain("Answer in Chinese")
   } finally {
     database.close()
     await rm(root, { recursive: true, force: true })

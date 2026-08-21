@@ -123,3 +123,51 @@ test("failed finalization stores only sanitized retry metadata and stops after t
     await context.fixture.close()
   }
 })
+
+test("idle never persists sensitive task fields", async () => {
+  const context = await setup(async () => [
+    {
+      info: {
+        id: "m1",
+        sessionID: "s1",
+        role: "user",
+        time: { created: 1 },
+        agent: "build",
+        model: { providerID: "x", modelID: "x" },
+      },
+      parts: [textPart("m1", "password=hunter2 fix login")],
+    },
+  ])
+  try {
+    context.services.state.setTodos("s1", [{ id: "1", content: "TOKEN=secret", status: "pending", priority: "high" }])
+    context.services.state.addCurrentFile("s1", "password=hunter2.txt")
+    await context.hooks.event?.({ event: { type: "session.idle", properties: { sessionID: "s1" } } as never })
+    expect(context.fixture.database.raw.serialize().toString("utf8")).not.toContain("hunter2")
+    expect(context.fixture.database.raw.serialize().toString("utf8")).not.toContain("TOKEN=secret")
+  } finally {
+    await context.fixture.close()
+  }
+})
+
+test("completed todos archive the active task instead of creating another active snapshot", async () => {
+  const context = await setup(async () => [])
+  try {
+    context.services.taskService?.replace({
+      projectId: "project-1",
+      goal: "Finish",
+      status: "active",
+      completed: [],
+      inProgress: [],
+      files: [],
+      decisions: [],
+      blockers: [],
+      nextSteps: [],
+      sourceSessionId: "s1",
+    })
+    context.services.state.setTodos("s1", [{ id: "1", content: "Finish", status: "completed", priority: "high" }])
+    await context.hooks.event?.({ event: { type: "session.idle", properties: { sessionID: "s1" } } as never })
+    expect(context.services.taskService?.getActive("project-1")).toBeUndefined()
+  } finally {
+    await context.fixture.close()
+  }
+})

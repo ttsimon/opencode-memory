@@ -40,8 +40,8 @@ test("recalls global preferences and only current-project memories", async () =>
 test("excludes deleted, archived, superseded and expired records", async () => {
   const context = await setup()
   try {
-    const active = context.service.remember(classifyManualMemory("Active build command is bun run check", "alpha"))
-    const deleted = context.service.remember(classifyManualMemory("Deleted build command is npm test", "alpha"))
+    const active = context.service.remember(classifyManualMemory("Active build command is make verify", "alpha"))
+    const deleted = context.service.remember(classifyManualMemory("Deleted build command is legacy verify", "alpha"))
     const expired = context.service.remember({
       ...classifyManualMemory("Expired build command is old-test", "alpha"),
       expiresAt: "2026-08-19T00:00:00.000Z",
@@ -88,6 +88,37 @@ test("enforces item and token budgets and updates injected metadata", async () =
     expect(result.estimatedTokens).toBeLessThanOrEqual(120)
     context.recall.markInjected(result)
     expect(context.memories.get(result.items[0]?.id ?? "")?.recallCount).toBe(1)
+  } finally {
+    await context.fixture.close()
+  }
+})
+
+test("oversized task does not suppress higher-priority memories", async () => {
+  const context = await setup()
+  try {
+    context.service.remember(classifyManualMemory("For this project, use bun", "alpha"))
+    context.tasks.insert({
+      projectId: "alpha",
+      goal: "x".repeat(2000),
+      status: "active",
+      completed: [],
+      inProgress: [],
+      files: [],
+      decisions: [],
+      blockers: [],
+      nextSteps: [],
+      sourceSessionId: "s1",
+    })
+    const result = context.recall.recall({
+      projectId: "alpha",
+      query: "bun",
+      recentTopics: [],
+      currentFiles: [],
+      now: new Date(),
+      tokenBudget: 100,
+    })
+    expect(result.items.map((item) => item.content)).toContain("For this project, use bun")
+    expect(result.task).toBeUndefined()
   } finally {
     await context.fixture.close()
   }

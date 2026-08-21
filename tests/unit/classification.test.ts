@@ -24,3 +24,9 @@ test("defaults uncertain scope to a project fact", () => {
     kind: "fact",
   })
 })
+
+test("package-manager corrections share a stable conflict key", () => {
+  expect(classifyManualMemory("For this project, use npm", "p1").conflictKey).toBe(
+    classifyManualMemory("For this project, use bun", "p1").conflictKey,
+  )
+})

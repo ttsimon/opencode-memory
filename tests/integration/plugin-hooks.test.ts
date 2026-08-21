@@ -128,6 +128,25 @@ test("disabled project skips recall but remains manually accessible", async () =
       },
     )
     expect(context.services.state.consumeRecall("s1")).toBeUndefined()
+    const compaction = { context: [] as string[] }
+    await context.hooks["experimental.session.compacting"]?.({ sessionID: "s1" }, compaction)
+    expect(compaction.context).toEqual([])
+    await context.hooks.event?.({ event: { type: "session.idle", properties: { sessionID: "s1" } } as never })
+    expect(context.services.tasks?.list("project-1")).toEqual([])
+  } finally {
+    await context.close()
+  }
+})
+
+test("file events populate later session state and session deletion cleans it", async () => {
+  const context = await setup()
+  try {
+    await context.hooks.event?.({ event: { type: "file.edited", properties: { file: "src/new.ts" } } as never })
+    expect(context.services.state.get("later").currentFiles).toEqual(["src/new.ts"])
+    context.services.state.recordWrite("later", { outcome: "created", id: "m1" })
+    await context.hooks.event?.({ event: { type: "session.deleted", properties: { info: { id: "later" } } } as never })
+    expect(context.services.state.get("later").currentFiles).toEqual(["src/new.ts"])
+    expect(context.services.state.get("later").lastWrites).toEqual([])
   } finally {
     await context.close()
   }

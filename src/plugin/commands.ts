@@ -50,8 +50,16 @@ export function routeMemoryCommand(
 }
 
 function commandInstruction(action: string, arguments_: string): string {
+  const argumentName =
+    action === "remember"
+      ? "text"
+      : ["show", "history"].includes(action)
+        ? "id"
+        : ["search", "forget"].includes(action)
+          ? "query"
+          : undefined
   return [
-    `Call the memory tool exactly once with action "${action}" and input "${arguments_}".`,
+    `Call the memory tool exactly once with action "${action}"${argumentName ? ` and ${argumentName} "${arguments_}"` : ""}.`,
     "Do not infer or invent database results.",
     "Return the tool output verbatim.",
   ].join("\n")

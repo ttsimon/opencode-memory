@@ -102,3 +102,17 @@ test("search, get and history expose current records", async () => {
     await context.fixture.close()
   }
 })
+
+test("project-scoped ids cannot be shown or deleted from another project", async () => {
+  const context = await createService()
+  try {
+    const created = context.service.remember(classifyManualMemory("Alpha fact", "alpha"))
+    if (created.outcome === "rejected") throw new Error("unexpected rejection")
+    expect(context.service.get(created.memory.id, "beta")).toBeUndefined()
+    expect(context.service.forget({ id: created.memory.id, projectId: "beta" })).toEqual({ outcome: "not_found" })
+    expect(context.memories.get(created.memory.id)?.status).toBe("active")
+    expect(context.service.history(undefined, "beta")).toEqual([])
+  } finally {
+    await context.fixture.close()
+  }
+})

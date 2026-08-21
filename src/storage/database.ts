@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite"
-import { copyFile, readdir, unlink } from "node:fs/promises"
+import { copyFile, readdir, stat, unlink } from "node:fs/promises"
 import { join } from "node:path"
 import type { DataPaths } from "../domain/types"
 import { ensureDataPaths } from "../paths"
@@ -24,6 +24,15 @@ interface OpenDatabaseOptions {
 
 export async function openDatabase(paths: DataPaths, options: OpenDatabaseOptions = {}): Promise<MemoryDatabase> {
   await ensureDataPaths(paths, process.platform)
+  const existingSize = await stat(paths.database)
+    .then((metadata) => metadata.size)
+    .catch(() => 0)
+  if (existingSize > 0) {
+    const probe = new Database(paths.database, { readonly: true, strict: true })
+    const existingVersion = readUserVersion(probe)
+    probe.close()
+    if (existingVersion === 0) await copyBackupFile(paths, 0)
+  }
   const database = new Database(paths.database, { create: true, strict: true })
   database.exec("PRAGMA foreign_keys = ON")
   database.exec("PRAGMA journal_mode = WAL")
@@ -99,6 +108,10 @@ function readUserVersion(database: Database): number {
 
 async function createMigrationBackup(database: Database, paths: DataPaths, version: number): Promise<void> {
   database.exec("PRAGMA wal_checkpoint(TRUNCATE)")
+  await copyBackupFile(paths, version)
+}
+
+async function copyBackupFile(paths: DataPaths, version: number): Promise<void> {
   const timestamp = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`
   await copyFile(paths.database, join(paths.backups, `memory-v${version}-${timestamp}.db`))
   const backups = (await readdir(paths.backups))

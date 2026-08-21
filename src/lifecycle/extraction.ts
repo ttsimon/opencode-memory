@@ -1,3 +1,4 @@
+import { inferConflictKey } from "../domain/classification"
 import type { MemoryCandidate, MemoryKind, MemoryScope } from "../domain/types"
 import { inspectSensitive } from "../security/filter"
 
@@ -36,6 +37,7 @@ export function extractImmediateCandidates(turn: ImmediateTurn): MemoryCandidate
   if (!rule) return []
 
   const scope = inferScope(rule.scope, text)
+  const conflictKey = isCorrection(text) ? inferConflictKey(rule.kind, text) : undefined
   return [
     {
       scope,
@@ -46,7 +48,7 @@ export function extractImmediateCandidates(turn: ImmediateTurn): MemoryCandidate
       importance: rule.kind === "decision" || rule.kind === "rule" ? 0.85 : 0.8,
       sourceSessionId: turn.sessionId,
       sourceMessageId: turn.messageId,
-      ...(isCorrection(text) ? { conflictKey: correctionKey(rule.kind, text) } : {}),
+      ...(conflictKey ? { conflictKey } : {}),
     },
   ]
 }
@@ -59,13 +61,4 @@ function inferScope(scope: MemoryScope | "infer", text: string): MemoryScope {
 
 function isCorrection(text: string): boolean {
   return /\b(from now on|do not|don't|instead)\b|以后不要|改用/i.test(text)
-}
-
-function correctionKey(kind: MemoryKind, text: string): string {
-  const topic = text
-    .toLowerCase()
-    .replace(/\b(from now on|do not|don't|instead|always|use)\b/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-  return `${kind}:${new Bun.CryptoHasher("sha256").update(topic).digest("hex").slice(0, 16)}`
 }

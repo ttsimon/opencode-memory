@@ -16,9 +16,10 @@ export interface SessionMemoryState {
 
 export class SessionState {
   private readonly sessions = new Map<string, SessionMemoryState>()
+  private readonly recentFiles: string[] = []
 
   get(sessionId: string): SessionMemoryState {
-    return this.sessions.get(sessionId) ?? createState()
+    return this.ensure(sessionId)
   }
 
   setRecall(sessionId: string, recall: RecallResult): void {
@@ -41,6 +42,12 @@ export class SessionState {
     if (!files.includes(file)) files.push(file)
   }
 
+  addCurrentFileToAll(file: string): void {
+    if (!this.recentFiles.includes(file)) this.recentFiles.push(file)
+    if (this.recentFiles.length > 20) this.recentFiles.shift()
+    for (const sessionId of this.sessions.keys()) this.addCurrentFile(sessionId, file)
+  }
+
   addRecentTopic(sessionId: string, topic: string): void {
     const topics = this.ensure(sessionId).recentTopics
     if (!topics.includes(topic)) topics.push(topic)
@@ -60,12 +67,12 @@ export class SessionState {
   private ensure(sessionId: string): SessionMemoryState {
     const current = this.sessions.get(sessionId)
     if (current) return current
-    const created = createState()
+    const created = createState(this.recentFiles)
     this.sessions.set(sessionId, created)
     return created
   }
 }
 
-function createState(): SessionMemoryState {
-  return { todos: [], currentFiles: [], recentTopics: [], lastWrites: [] }
+function createState(currentFiles: readonly string[] = []): SessionMemoryState {
+  return { todos: [], currentFiles: [...currentFiles], recentTopics: [], lastWrites: [] }
 }

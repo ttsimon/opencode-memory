@@ -51,8 +51,11 @@ export class MemoryService {
     return this.memories.search(query, projectId)
   }
 
-  get(id: string): MemoryRecord | undefined {
-    return this.memories.get(id)
+  get(id: string, projectId?: string): MemoryRecord | undefined {
+    const memory = this.memories.get(id)
+    if (!memory) return undefined
+    if (projectId && memory.scope === "project" && memory.projectId !== projectId) return undefined
+    return memory
   }
 
   forget(selector: { readonly id?: string; readonly query?: string; readonly projectId: string }): ForgetResult {
@@ -66,7 +69,7 @@ export class MemoryService {
     if (!id) return { outcome: "not_found" }
 
     return this.database.raw.transaction(() => {
-      const current = this.memories.get(id)
+      const current = this.get(id, selector.projectId)
       if (!current || current.status === "deleted") return { outcome: "not_found" } as const
       const deleted = this.memories.softDelete(id)
       if (!deleted) return { outcome: "not_found" } as const
@@ -75,7 +78,8 @@ export class MemoryService {
     })()
   }
 
-  history(id?: string) {
-    return this.audit.list(id)
+  history(id?: string, projectId?: string) {
+    if (id && !this.get(id, projectId)) return []
+    return projectId ? this.audit.listForProject(projectId, id) : this.audit.list(id)
   }
 }

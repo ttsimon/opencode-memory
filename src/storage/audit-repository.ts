@@ -117,6 +117,20 @@ export class AuditRepository {
     return rows.map(mapAudit)
   }
 
+  listForProject(projectId: string, entityId?: string): AuditEvent[] {
+    return this.database.raw
+      .query<AuditRow, [string, string, string | null, string | null]>(`
+        SELECT audit_events.* FROM audit_events
+        LEFT JOIN memories ON audit_events.entity_type = 'memory' AND memories.id = audit_events.entity_id
+        LEFT JOIN task_snapshots ON audit_events.entity_type = 'task' AND task_snapshots.id = audit_events.entity_id
+        WHERE (memories.scope = 'global' OR memories.project_id = ? OR task_snapshots.project_id = ?)
+          AND (? IS NULL OR audit_events.entity_id = ?)
+        ORDER BY audit_events.created_at, audit_events.rowid
+      `)
+      .all(projectId, projectId, entityId ?? null, entityId ?? null)
+      .map(mapAudit)
+  }
+
   private insert(event: Omit<AuditEvent, "id" | "createdAt">): void {
     this.database.raw
       .query(`

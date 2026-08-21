@@ -32,7 +32,13 @@ export class MemoryDoctor {
     )
     checks.push(check("project", /^[a-f0-9]{32}$/.test(project.projectId), `Project kind: ${project.kind}`))
     checks.push(await permissionCheck(this.paths.root))
-    checks.push(await projectionCheck(join(this.paths.projects, project.projectId, "MEMORY.md")))
+    checks.push(
+      await projectionCheck(
+        this.database,
+        project.projectId,
+        join(this.paths.projects, project.projectId, "MEMORY.md"),
+      ),
+    )
     const recommendations: string[] = []
     if (checks.some((item) => item.name === "database" && item.status === "error")) {
       recommendations.push(`Restore from a backup under ${this.paths.backups}.`)
@@ -51,7 +57,14 @@ export class MemoryDoctor {
 
 function hasFts(database: MemoryDatabase): boolean {
   const names = database.tableNames()
-  return names.includes("memory_fts")
+  if (!names.includes("memory_fts")) return false
+  const triggerCount = database.raw
+    .query<{ count: number }, []>(`
+      SELECT COUNT(*) AS count FROM sqlite_master
+      WHERE type = 'trigger' AND name IN ('memories_fts_insert', 'memories_fts_delete', 'memories_fts_update')
+    `)
+    .get()?.count
+  return triggerCount === 3
 }
 
 function check(name: DoctorCheck["name"], valid: boolean, message: string): DoctorCheck {
@@ -75,11 +88,20 @@ async function permissionCheck(root: string): Promise<DoctorCheck> {
   }
 }
 
-async function projectionCheck(path: string): Promise<DoctorCheck> {
+async function projectionCheck(database: MemoryDatabase, projectId: string, path: string): Promise<DoctorCheck> {
   const file = Bun.file(path)
   if (!(await file.exists())) return { name: "projection", status: "warning", message: "Projection is missing." }
   const text = await file.text()
-  return text.includes("Generated from SQLite")
+  const rows = database.raw
+    .query<{ content: string; status: string; importance: number }, [string]>(
+      "SELECT content, status, importance FROM memories WHERE project_id = ?",
+    )
+    .all(projectId)
+  const activeMissing = rows.some(
+    (row) => row.status === "active" && row.importance >= 0.7 && !text.includes(row.content),
+  )
+  const inactivePresent = rows.some((row) => row.status !== "active" && text.includes(row.content))
+  return text.includes("Generated from SQLite") && !activeMissing && !inactivePresent
     ? { name: "projection", status: "ok", message: "Projection marker is present." }
     : { name: "projection", status: "warning", message: "Projection should be rebuilt." }
 }

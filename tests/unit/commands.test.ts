@@ -24,4 +24,5 @@ test("routes command execution to one fixed memory tool action", () => {
   expect(text.includes('action "search"')).toBe(true)
   expect(text.includes("sqlite")).toBe(true)
   expect(text.includes("Return the tool output verbatim")).toBe(true)
+  expect(text.includes('query "sqlite"')).toBe(true)
 })

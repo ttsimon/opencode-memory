@@ -25,7 +25,7 @@ export interface PluginServices {
   readonly memory?: MemoryService
   readonly memories?: MemoryRepository
   readonly tasks?: TaskRepository
-  readonly taskService?: Pick<TaskService, "getActive" | "replace">
+  readonly taskService?: Pick<TaskService, "getActive" | "replace" | "archive">
   readonly recall?: RecallEngine
   readonly state: SessionState
   readonly runtime: PluginRuntime
@@ -125,6 +125,7 @@ export function createHooks(services: PluginServices): Hooks {
             created += 1
             services.state.recordWrite(input.sessionID, { outcome: result.outcome, id: result.memory.id })
             if (result.memory.scope === "project") await services.projection?.rebuildProject(services.project.projectId)
+            else await services.projection?.rebuildGlobal()
           }
         }
         if (created > 0)
@@ -155,6 +156,7 @@ export function createHooks(services: PluginServices): Hooks {
     "experimental.session.compacting": services.runtime.guardHook(
       "session.compacting",
       async (input: { sessionID: string }, output: { context: string[]; prompt?: string }) => {
+        if (services.project && services.database && !isProjectEnabled(services, services.project.projectId)) return
         const task = services.project ? services.taskService?.getActive(services.project.projectId) : undefined
         const lines = [
           "Preserve the current task goal and status.",
@@ -181,9 +183,19 @@ export function createHooks(services: PluginServices): Hooks {
         const properties = event.properties as { sessionID: string; todos: Todo[] }
         updateTodos(services, properties.sessionID, properties.todos)
       }
+      if (event.type === "file.edited") {
+        const properties = event.properties as { file: string }
+        services.state.addCurrentFileToAll(properties.file)
+      }
       if (event.type === "session.idle") {
         const properties = event.properties as { sessionID: string }
-        await finalizeSession(services, properties.sessionID)
+        if (services.project && isProjectEnabled(services, services.project.projectId)) {
+          await finalizeSession(services, properties.sessionID)
+        }
+      }
+      if (event.type === "session.deleted") {
+        const properties = event.properties as { info: { id: string } }
+        services.state.cleanup(properties.info.id)
       }
     }),
     tool: { memory: createMemoryTool(services) },

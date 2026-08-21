@@ -104,6 +104,16 @@ export class MemoryRepository {
       .map(mapMemory)
   }
 
+  listProjectableGlobal(): MemoryRecord[] {
+    return this.database.raw
+      .query<MemoryRow, []>(`
+        SELECT * FROM memories WHERE scope = 'global' AND status = 'active' AND importance >= 0.7
+        ORDER BY kind, importance DESC, updated_at DESC
+      `)
+      .all()
+      .map(mapMemory)
+  }
+
   findDuplicate(candidate: MemoryCandidate): MemoryRecord | undefined {
     if (candidate.sourceSessionId && candidate.sourceMessageId) {
       const bySource = this.database.raw

@@ -56,3 +56,9 @@ test("keeps only the ten newest unique recent topics", () => {
     "topic-11",
   ])
 })
+
+test("file events are available to sessions created afterwards", () => {
+  const state = new SessionState()
+  state.addCurrentFileToAll("src/new-file.ts")
+  expect(state.get("later").currentFiles).toEqual(["src/new-file.ts"])
+})

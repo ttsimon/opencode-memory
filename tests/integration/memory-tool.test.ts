@@ -61,6 +61,9 @@ test("memory tool covers MVP management actions", async () => {
     )
     expect(String(await fixture.tool.execute({ action: "status" }, context))).toContain('"enabled": false')
     expect(await fixture.tool.execute({ action: "enable" }, context)).toBe("OpenCode Memory enabled for this project.")
+    expect(
+      String(await fixture.tool.execute({ action: "remember", text: "Always answer me in Chinese" }, context)),
+    ).toContain("Saved global preference")
     expect(await fixture.tool.execute({ action: "forget", id }, context)).toBe(`Soft-deleted memory ${id}.`)
     expect(await fixture.tool.execute({ action: "forget", id }, context)).toBe("Memory not found.")
   } finally {
@@ -80,4 +83,37 @@ test("degraded memory tool keeps health and reports unavailable storage", async 
   const tool = createMemoryTool(services)
   expect(await tool.execute({ action: "health" }, context)).toBe("OpenCode Memory is loaded.")
   expect(await tool.execute({ action: "status" }, context)).toBe("OpenCode Memory is degraded: database locked")
+})
+
+test("memory tool catches runtime database failures", async () => {
+  const fixture = await setup()
+  try {
+    fixture.fixture.database.raw.close()
+    const result = String(await fixture.tool.execute({ action: "search", query: "test" }, context))
+    expect(result).toContain("OpenCode Memory is degraded")
+    expect(fixture.services.runtime.status().codes).toContain("tool.search")
+  } finally {
+    await fixture.fixture.close().catch(() => {})
+  }
+})
+
+test("memory tool redacts sensitive runtime errors", async () => {
+  const fake = createFakeRuntimeClient()
+  const services = {
+    memory: {
+      search() {
+        throw new Error("password=hunter2")
+      },
+    },
+    database: { raw: {} },
+    memories: {},
+    project: { projectId: "p1" },
+    state: new SessionState(),
+    runtime: createRuntime(fake.client, "C:/project"),
+    directory: "C:/project",
+    dispose() {},
+  } as unknown as PluginServices
+  const result = String(await createMemoryTool(services).execute({ action: "search", query: "x" }, context))
+  expect(result).not.toContain("hunter2")
+  expect(result).toContain("[REDACTED:password]")
 })

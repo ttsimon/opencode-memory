@@ -39,6 +39,9 @@ test("appends task and secret-safety requirements without replacing the prompt",
     replace() {
       throw new Error("not used")
     },
+    archive() {
+      throw new Error("not used")
+    },
   } satisfies NonNullable<PluginServices["taskService"]>
   const output: { context: string[]; prompt?: string } = { context: [] }
   await hooks(task)["experimental.session.compacting"]?.({ sessionID: "s1" }, output)
