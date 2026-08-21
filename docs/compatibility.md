@@ -4,10 +4,10 @@
 
 | Component | Supported version | Policy |
 | --- | --- | --- |
-| OpenCode | OpenCode 1.18.18 | Exact version used for plugin API and integration validation |
+| OpenCode | OpenCode 1.18.19 | Exact version used for plugin API and integration validation |
 | Bun | Bun 1.3.14 | Exact version used for development, tests, builds, and package checks |
 
-The current development branch validates the manual-memory MVP and automatic-memory lifecycle against OpenCode 1.18.18.
+The current development branch validates the manual-memory MVP and automatic-memory lifecycle against OpenCode 1.18.19.
 
 ## Version policy
 

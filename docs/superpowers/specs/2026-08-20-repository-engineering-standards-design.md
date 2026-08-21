@@ -33,9 +33,9 @@
 | 组件 | 版本 | 约束位置 |
 | --- | --- | --- |
 | Bun | `1.3.14` | `.mise.toml`、`package.json#packageManager` |
-| OpenCode | `1.18.18` | 兼容矩阵、E2E |
-| `@opencode-ai/plugin` | `1.18.18` | `package.json` |
-| `@opencode-ai/sdk` | `1.18.18` | `package.json` |
+| OpenCode | `1.18.19` | 兼容矩阵、E2E |
+| `@opencode-ai/plugin` | `1.18.19` | `package.json` |
+| `@opencode-ai/sdk` | `1.18.19` | `package.json` |
 | TypeScript | `5.8.2` | `package.json` |
 | Zod | `4.1.8` | `package.json` |
 | Biome | `2.5.9` | `package.json` |
@@ -467,8 +467,8 @@ bun pm pack
 
 ## 15. OpenCode 兼容策略
 
-- 首版只保证 OpenCode `1.18.18`。
-- plugin 与 SDK 使用精确 `1.18.18`，不用 `^` 或 `~`。
+- 首版只保证 OpenCode `1.18.19`。
+- plugin 与 SDK 使用精确 `1.18.19`，不用 `^` 或 `~`。
 - README 和 `docs/compatibility.md` 维护兼容矩阵。
 - OpenCode 升级通过独立 PR 和独立兼容版本发布。
 - 升级必须重新核对插件 API、事件载荷、自定义命令和 SDK。

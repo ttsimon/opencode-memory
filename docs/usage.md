@@ -2,7 +2,7 @@
 
 ## Installation status
 
-The package is not published yet. Development and host tests load the built plugin in an isolated OpenCode 1.18.18 environment. After a future installation or configuration change, quit and restart OpenCode because plugins and configuration are loaded at startup.
+The package is not published yet. Development and host tests load the built plugin in an isolated OpenCode 1.18.19 environment. After a future installation or configuration change, quit and restart OpenCode because plugins and configuration are loaded at startup.
 
 ## Data locations
 

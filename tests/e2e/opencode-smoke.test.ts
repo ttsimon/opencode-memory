@@ -11,7 +11,7 @@ afterEach(async () => {
   }
 })
 
-test("OpenCode 1.18.18 loads the built plugin, tool and MVP commands", async () => {
+test("OpenCode 1.18.19 loads the built plugin, tool and MVP commands", async () => {
   const server = await startIsolatedOpenCodeServer({
     plugin: new URL("../../dist/index.js", import.meta.url),
   })

@@ -5,8 +5,8 @@
     "": {
       "name": "@ttsimon/opencode-memory",
       "dependencies": {
-        "@opencode-ai/plugin": "1.18.18",
-        "@opencode-ai/sdk": "1.18.18",
+        "@opencode-ai/plugin": "1.18.19",
+        "@opencode-ai/sdk": "1.18.19",
         "zod": "4.1.8",
       },
       "devDependencies": {
@@ -17,7 +17,7 @@
         "@types/bun": "1.3.14",
         "husky": "9.1.7",
         "lint-staged": "16.2.6",
-        "opencode-ai": "1.18.18",
+        "opencode-ai": "1.18.19",
         "typescript": "5.8.2",
       },
     },
@@ -133,9 +133,9 @@
 
     "@msgpackr-extract/msgpackr-extract-win32-x64": ["@msgpackr-extract/msgpackr-extract-win32-x64@3.0.4", "https://registry.npmmirror.com/@msgpackr-extract/msgpackr-extract-win32-x64/-/msgpackr-extract-win32-x64-3.0.4.tgz", { "os": "win32", "cpu": "x64" }, "sha512-CmCXPQrkbwExx3j946/PtHWHbYJiCRBRDl4BlkRQcJB/YOwQxJRTpoo7aTsortjgoJ1x7opzTSxn7C+ASSLVjQ=="],
 
-    "@opencode-ai/plugin": ["@opencode-ai/plugin@1.18.18", "https://registry.npmmirror.com/@opencode-ai/plugin/-/plugin-1.18.18.tgz", { "dependencies": { "@ai-sdk/provider": "3.0.8", "@opencode-ai/sdk": "1.18.18", "effect": "4.0.0-beta.83", "zod": "4.1.8" }, "peerDependencies": { "@opentui/core": ">=0.4.5", "@opentui/keymap": ">=0.4.5", "@opentui/solid": ">=0.4.5" }, "optionalPeers": ["@opentui/core", "@opentui/keymap", "@opentui/solid"] }, "sha512-vqQeqJtn9c+J+tIQDzYk88xip/NVNN1hym1ATmckxo6zINHAoXoul4Sw/jgnvL00rLsfAvhja28qax4h3g/5Jg=="],
+    "@opencode-ai/plugin": ["@opencode-ai/plugin@1.18.19", "https://registry.npmmirror.com/@opencode-ai/plugin/-/plugin-1.18.19.tgz", { "dependencies": { "@ai-sdk/provider": "3.0.8", "@opencode-ai/sdk": "1.18.19", "effect": "4.0.0-beta.83", "zod": "4.1.8" }, "peerDependencies": { "@opentui/core": ">=0.4.5", "@opentui/keymap": ">=0.4.5", "@opentui/solid": ">=0.4.5" }, "optionalPeers": ["@opentui/core", "@opentui/keymap", "@opentui/solid"] }, "sha512-Z7MZALTNDg6WBNZVVGFhh2FwKd2dBDKmRqOFtXkJ1RDB2+PtqcrBz+3ZjpvgZDe2h9eW8N+1rxkIJEU5FnPU3g=="],
 
-    "@opencode-ai/sdk": ["@opencode-ai/sdk@1.18.18", "https://registry.npmmirror.com/@opencode-ai/sdk/-/sdk-1.18.18.tgz", { "dependencies": { "cross-spawn": "7.0.6" } }, "sha512-zJlwXskIR47V1dkPJqeKBgq7nejG1uU8lJaGIGqbX3MWRCT8vKn0fEotbxuPCKnTdmWsDyNGNg9q1qIliDSMDA=="],
+    "@opencode-ai/sdk": ["@opencode-ai/sdk@1.18.19", "https://registry.npmmirror.com/@opencode-ai/sdk/-/sdk-1.18.19.tgz", { "dependencies": { "cross-spawn": "7.0.6" } }, "sha512-AnszRg7cJ3PA6/06mkqdTJDKn9NJuV26AJMWbKEgRsznbJvrhf3PT8UhQQOhyKQYCygx9ZOxyKMIPVOQdMSS1A=="],
 
     "@pnpm/deps.graph-sequencer": ["@pnpm/deps.graph-sequencer@1100.0.1", "https://registry.npmmirror.com/@pnpm/deps.graph-sequencer/-/deps.graph-sequencer-1100.0.1.tgz", {}, "sha512-pOr5+q1fLYKwFN3LAJuGZEnfXDcQ73zqgDHMtGy+K+uIoUqyY+6MeDCWFwfu+4EFuq76I5EPFofoNAI+Bmmq4A=="],
 
@@ -339,31 +339,31 @@
 
     "onetime": ["onetime@7.0.0", "https://registry.npmmirror.com/onetime/-/onetime-7.0.0.tgz", { "dependencies": { "mimic-function": "^5.0.0" } }, "sha512-VXJjc87FScF88uafS3JllDgvAm+c/Slfz06lorj2uAY34rlUu0Nt+v8wreiImcrgAjjIHp1rXpTDlLOGw29WwQ=="],
 
-    "opencode-ai": ["opencode-ai@1.18.18", "https://registry.npmmirror.com/opencode-ai/-/opencode-ai-1.18.18.tgz", { "optionalDependencies": { "opencode-darwin-arm64": "1.18.18", "opencode-darwin-x64": "1.18.18", "opencode-darwin-x64-baseline": "1.18.18", "opencode-linux-arm64": "1.18.18", "opencode-linux-arm64-musl": "1.18.18", "opencode-linux-x64": "1.18.18", "opencode-linux-x64-baseline": "1.18.18", "opencode-linux-x64-baseline-musl": "1.18.18", "opencode-linux-x64-musl": "1.18.18", "opencode-windows-arm64": "1.18.18", "opencode-windows-x64": "1.18.18", "opencode-windows-x64-baseline": "1.18.18" }, "os": [ "linux", "win32", "darwin", ], "cpu": [ "x64", "arm64", ], "bin": { "opencode": "bin/opencode.exe" } }, "sha512-J+5HFq8tf+wPBBpBpMPSNjSytF2/EkNWYfFZh4si1d9auFbQriqDyqZv+vFUsLWERfdMU32Eajwuiq3rKBvZLQ=="],
+    "opencode-ai": ["opencode-ai@1.18.19", "https://registry.npmmirror.com/opencode-ai/-/opencode-ai-1.18.19.tgz", { "optionalDependencies": { "opencode-darwin-arm64": "1.18.19", "opencode-darwin-x64": "1.18.19", "opencode-darwin-x64-baseline": "1.18.19", "opencode-linux-arm64": "1.18.19", "opencode-linux-arm64-musl": "1.18.19", "opencode-linux-x64": "1.18.19", "opencode-linux-x64-baseline": "1.18.19", "opencode-linux-x64-baseline-musl": "1.18.19", "opencode-linux-x64-musl": "1.18.19", "opencode-windows-arm64": "1.18.19", "opencode-windows-x64": "1.18.19", "opencode-windows-x64-baseline": "1.18.19" }, "os": [ "linux", "win32", "darwin", ], "cpu": [ "x64", "arm64", ], "bin": { "opencode": "bin/opencode.exe" } }, "sha512-+lD0mLSZdnS3hzDFmrhH1epH6pXY2KRCGTNE+/i6sXmontPd+CEO8ruWOhE/myutLLhvaiPa249ZAaK6p5nlww=="],
 
-    "opencode-darwin-arm64": ["opencode-darwin-arm64@1.18.18", "https://registry.npmmirror.com/opencode-darwin-arm64/-/opencode-darwin-arm64-1.18.18.tgz", { "os": "darwin", "cpu": "arm64" }, "sha512-VkG+bz8u8Xqg9NzPK+2/71nEd4DKKlo2NLZurQ1eLAzDnmb1CMYZif/o6Shl8YFuTuYU/30k6yufl4Zr0Ij64g=="],
+    "opencode-darwin-arm64": ["opencode-darwin-arm64@1.18.19", "https://registry.npmmirror.com/opencode-darwin-arm64/-/opencode-darwin-arm64-1.18.19.tgz", { "os": "darwin", "cpu": "arm64" }, "sha512-Z4WmQzW6rj5Z4T3iv2kJr6Evhckxw3Mco8nsDE26vzZE4HjbdO2pF9NRFchzS24ippMKZNkR0XyCT4uI3VcZRg=="],
 
-    "opencode-darwin-x64": ["opencode-darwin-x64@1.18.18", "https://registry.npmmirror.com/opencode-darwin-x64/-/opencode-darwin-x64-1.18.18.tgz", { "os": "darwin", "cpu": "x64" }, "sha512-xox5XJJ1bI5qDEbxWWR9pWY2Gak5IuSfDcObyWunRUiN7J8OiwyazsJs1HGsTSkVhisk8SNbFIr0/0xQGhxSZg=="],
+    "opencode-darwin-x64": ["opencode-darwin-x64@1.18.19", "https://registry.npmmirror.com/opencode-darwin-x64/-/opencode-darwin-x64-1.18.19.tgz", { "os": "darwin", "cpu": "x64" }, "sha512-zO57azxkOmsE82ElHJDLCDZKYbIIKC9QYEq3VRxy1BmcNBwnkgNTJmMoS7MtwgM3Zbh9WIqRHNmB16RaVGd8qQ=="],
 
-    "opencode-darwin-x64-baseline": ["opencode-darwin-x64-baseline@1.18.18", "https://registry.npmmirror.com/opencode-darwin-x64-baseline/-/opencode-darwin-x64-baseline-1.18.18.tgz", { "os": "darwin", "cpu": "x64" }, "sha512-NYlIeOOxKPrqY6rdVIjQV4h+eE1AFCHzEcoxXhc8zSvqnCVIO0hMtdNm3l3HhrDucWmdh1BsQBUoZlrBOvAl4w=="],
+    "opencode-darwin-x64-baseline": ["opencode-darwin-x64-baseline@1.18.19", "https://registry.npmmirror.com/opencode-darwin-x64-baseline/-/opencode-darwin-x64-baseline-1.18.19.tgz", { "os": "darwin", "cpu": "x64" }, "sha512-Gr+yMuW/5ixFGV5Z18VOmPRjRuMMsM6WY74GE2DqkFvAv2sLwUT3Ap5jWPNoo2oHAJztF0JptsJJHWjA2hN8Lg=="],
 
-    "opencode-linux-arm64": ["opencode-linux-arm64@1.18.18", "https://registry.npmmirror.com/opencode-linux-arm64/-/opencode-linux-arm64-1.18.18.tgz", { "os": "linux", "cpu": "arm64" }, "sha512-e8D3g0qJEIzawEg2+ygW3vkZjAYL2ssyAx4GbihjwXwZFvlZZy5zRWWzdz5KLBoHSTl0FB73vNtnNeXONyHpVQ=="],
+    "opencode-linux-arm64": ["opencode-linux-arm64@1.18.19", "https://registry.npmmirror.com/opencode-linux-arm64/-/opencode-linux-arm64-1.18.19.tgz", { "os": "linux", "cpu": "arm64" }, "sha512-sHWJ5LLh8MG3wPIAg2pdpDdYV1gzlP7jAOoBfwkyks7dr0h2NFv3TRea5N8X4ZM11GkoVrlpSQddAgk5zUmDlg=="],
 
-    "opencode-linux-arm64-musl": ["opencode-linux-arm64-musl@1.18.18", "https://registry.npmmirror.com/opencode-linux-arm64-musl/-/opencode-linux-arm64-musl-1.18.18.tgz", { "os": "linux", "cpu": "arm64" }, "sha512-Dp3XByFRRZngPAQotNbOwr22HgZej4r9Ck0Iv/rOVU+oO5fLD9YSpHEwx80FTZOZmFmd/vriCdrR/dGdzabICw=="],
+    "opencode-linux-arm64-musl": ["opencode-linux-arm64-musl@1.18.19", "https://registry.npmmirror.com/opencode-linux-arm64-musl/-/opencode-linux-arm64-musl-1.18.19.tgz", { "os": "linux", "cpu": "arm64" }, "sha512-tADuh/RW576kjtRf/NIXyM7HUP9FUxrLDkyQRI38Pu5nwew2biDdC9ll9JolHgLqL/KbzE44abjAf1PfO/w+kg=="],
 
-    "opencode-linux-x64": ["opencode-linux-x64@1.18.18", "https://registry.npmmirror.com/opencode-linux-x64/-/opencode-linux-x64-1.18.18.tgz", { "os": "linux", "cpu": "x64" }, "sha512-WmeUnhljYJ252wywKTiW4bNDzsas2njpjPUEh0jM6HKNI4vFxJtREtzaWViY4AKEAcOkLWT8Ll17ixvcHz3AnA=="],
+    "opencode-linux-x64": ["opencode-linux-x64@1.18.19", "https://registry.npmmirror.com/opencode-linux-x64/-/opencode-linux-x64-1.18.19.tgz", { "os": "linux", "cpu": "x64" }, "sha512-WR7OBWKvks6HvZse/ytaAttGSji6YfHz91IenEMBMA6PoetU33tJfxSnlYrwlK7fCZc68AJK1theTNVVv+7Q3w=="],
 
-    "opencode-linux-x64-baseline": ["opencode-linux-x64-baseline@1.18.18", "https://registry.npmmirror.com/opencode-linux-x64-baseline/-/opencode-linux-x64-baseline-1.18.18.tgz", { "os": "linux", "cpu": "x64" }, "sha512-6GvFarhP0pDiXcE9Au8PWoqb9+ZLBIGKrhZxeVAmOJp/gJ8lLL1Eno8O1qpqRb1KjOfOaOD71jHu9xNaqmjEtw=="],
+    "opencode-linux-x64-baseline": ["opencode-linux-x64-baseline@1.18.19", "https://registry.npmmirror.com/opencode-linux-x64-baseline/-/opencode-linux-x64-baseline-1.18.19.tgz", { "os": "linux", "cpu": "x64" }, "sha512-bvGsC/IIQ1eDT7hNbgpSRbgONzdQ5wm5SLC59J/oNePkaIgR2YozdSQ4eFSOV0zxwmWPCoGL5JgZBUzyKBx92g=="],
 
-    "opencode-linux-x64-baseline-musl": ["opencode-linux-x64-baseline-musl@1.18.18", "https://registry.npmmirror.com/opencode-linux-x64-baseline-musl/-/opencode-linux-x64-baseline-musl-1.18.18.tgz", { "os": "linux", "cpu": "x64" }, "sha512-cXD1gAZ+TTmdE3tnWy5qPstZjrnbPg0rPUwtcHeLaeB+KYxQWEoie1c88oYmZfQ+RWI6+/+LLF0FU29Uyd1Nrw=="],
+    "opencode-linux-x64-baseline-musl": ["opencode-linux-x64-baseline-musl@1.18.19", "https://registry.npmmirror.com/opencode-linux-x64-baseline-musl/-/opencode-linux-x64-baseline-musl-1.18.19.tgz", { "os": "linux", "cpu": "x64" }, "sha512-gBhHTJnn2ntHCVdINqhSlRAPsYcYqOGXOXIXqlGMgpHFUHOwgyorZqha3uSGjb7lsUjOB6z7Fev7ZQ/KkDhKhQ=="],
 
-    "opencode-linux-x64-musl": ["opencode-linux-x64-musl@1.18.18", "https://registry.npmmirror.com/opencode-linux-x64-musl/-/opencode-linux-x64-musl-1.18.18.tgz", { "os": "linux", "cpu": "x64" }, "sha512-lWiWxotqyVTJYiu2dN90KDNDSrwmyhZk8ajzyfAFjwms2TBVx4L0Ly6gkdhz8nxsxwPRv751W8+yUpzetB8AMA=="],
+    "opencode-linux-x64-musl": ["opencode-linux-x64-musl@1.18.19", "https://registry.npmmirror.com/opencode-linux-x64-musl/-/opencode-linux-x64-musl-1.18.19.tgz", { "os": "linux", "cpu": "x64" }, "sha512-SiZvUiwpinFdO5dir/xewbBAFMMfV/GQMeDZdAsnic9mJzO3DdE9XbbjHmvPEpiwD9oBW5PUtrHGs/Dyp/VUQA=="],
 
-    "opencode-windows-arm64": ["opencode-windows-arm64@1.18.18", "https://registry.npmmirror.com/opencode-windows-arm64/-/opencode-windows-arm64-1.18.18.tgz", { "os": "win32", "cpu": "arm64" }, "sha512-Fj1LfP3kXUeD34N0FOw6vebS1oK2YmxA2nviAKOAPo8jLFjEgq5djAJ/WroPmS71VOP1EHlKhRshnK3Sx8pI2w=="],
+    "opencode-windows-arm64": ["opencode-windows-arm64@1.18.19", "https://registry.npmmirror.com/opencode-windows-arm64/-/opencode-windows-arm64-1.18.19.tgz", { "os": "win32", "cpu": "arm64" }, "sha512-T3Q2ud2sEst3tr2q6KnhnR7LqXHb0nCTGMK9B76wLN2Z39Ivw8YhMhru76n0RyPKgu8Yiy9rbwn4M7ND9zXfYQ=="],
 
-    "opencode-windows-x64": ["opencode-windows-x64@1.18.18", "https://registry.npmmirror.com/opencode-windows-x64/-/opencode-windows-x64-1.18.18.tgz", { "os": "win32", "cpu": "x64" }, "sha512-wbsBZsHDgfHaw9zJogFrrSfWpObtXMFjiA6xl6IFyeVGXsdKi6E8AWIMRZUxKVkf9X0P48mYUuaP1EHgmJCbpA=="],
+    "opencode-windows-x64": ["opencode-windows-x64@1.18.19", "https://registry.npmmirror.com/opencode-windows-x64/-/opencode-windows-x64-1.18.19.tgz", { "os": "win32", "cpu": "x64" }, "sha512-+8b7eP8YtSBlDNNC6pKdWqmXzWplxRGGwmRsxhO34onjIwH2XAIbKsAtnFoA5GZjHoGmfNE77YXNs0IcLIDaaQ=="],
 
-    "opencode-windows-x64-baseline": ["opencode-windows-x64-baseline@1.18.18", "https://registry.npmmirror.com/opencode-windows-x64-baseline/-/opencode-windows-x64-baseline-1.18.18.tgz", { "os": "win32", "cpu": "x64" }, "sha512-IeTrXqbIDbXD5VXpeupRa8aD+l4lSNeq02/K0jnaEPvR5adv42tiN1rOENiTaO2uX+d9cQ/csCaJPBFiQvwoRg=="],
+    "opencode-windows-x64-baseline": ["opencode-windows-x64-baseline@1.18.19", "https://registry.npmmirror.com/opencode-windows-x64-baseline/-/opencode-windows-x64-baseline-1.18.19.tgz", { "os": "win32", "cpu": "x64" }, "sha512-Y9ETZMUnGw0R1oMzPvMDVi48s9xWgBUPYoC1ue6wBe30RJ4lOTQJUN9CUybNFXnED73H56ar25dvozuetO9J+g=="],
 
     "p-limit": ["p-limit@4.0.0", "https://registry.npmmirror.com/p-limit/-/p-limit-4.0.0.tgz", { "dependencies": { "yocto-queue": "^1.0.0" } }, "sha512-5b0R4txpzjPWVw/cXXUResoD4hb6U/x9BH08L7nw+GN1sezDzPdxeRvpc9c433fZhBan/wusjbCsqwqm4EIBIQ=="],
 

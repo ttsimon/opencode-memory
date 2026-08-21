@@ -78,7 +78,7 @@ test("public documentation describes the current project accurately", async () =
   expect(readme).toContain("manual-memory MVP")
   expect(readme).toContain("automatic-memory phase")
   expect(readme).toContain("idle-session finalization")
-  expect(readme).toContain("OpenCode 1.18.18")
+  expect(readme).toContain("OpenCode 1.18.19")
   expect(readme).toContain("Bun 1.3.14")
 
   const security = await readFile("SECURITY.md", "utf8")
@@ -98,7 +98,7 @@ test("public documentation describes the current project accurately", async () =
   expect(await readFile("LICENSE", "utf8")).toContain("MIT License")
   expect(await readFile("LICENSE", "utf8")).toContain("Copyright (c) 2026 Simon")
   const compatibility = await readFile("docs/compatibility.md", "utf8")
-  expect(compatibility).toContain("OpenCode 1.18.18")
+  expect(compatibility).toContain("OpenCode 1.18.19")
   expect(compatibility).toContain("Bun 1.3.14")
 })
 
